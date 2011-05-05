@@ -11,6 +11,10 @@ sdk.dir=PATH/TO/ANDROID_SDK
 
 (Replace "PATH/TO/ANDROID_SDK" with the actual path to your Android SDK install).
 
-Build with the command:
+Build a jar file with:
 
-ant 
+ant jar
+
+Or, to include svgandroid as a library project in your own Android project, see here:
+
+http://developer.android.com/guide/developing/projects/projects-cmdline.html#ReferencingLibraryProject

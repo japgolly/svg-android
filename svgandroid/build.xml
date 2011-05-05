@@ -88,4 +88,13 @@
         </javadoc>
     </target>
 
+    <target name="jar">
+        <mkdir dir="build"/>
+        <javac srcdir="src"
+               destdir="build">
+            <classpath path="${sdk.dir}/platforms/android-4/android.jar"/>
+        </javac>
+        <jar destfile="svg-android.jar"
+             basedir="build"/>
+    </target>
 </project>

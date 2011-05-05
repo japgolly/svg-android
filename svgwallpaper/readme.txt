@@ -15,4 +15,4 @@ sdk.dir=PATH/TO/ANDROID_SDK
 
 Plug in a debug-enabled Android device and run the following to build and install the wallpaper:
 
-ant 
+ant install
