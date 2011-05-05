@@ -19,8 +19,8 @@
  * Even with the above features missing, users will find that most Illustrator drawings will render perfectly well on
  * Android with this library.
  *
- * See the {@link SVGParser SVGParser} class for instructions on how to use the parser.
+ * See the {@link com.larvalabs.svgandroid.SVGParser SVGParser} class for instructions on how to use the parser.
  *
- * @see SVGParser
+ * @see com.larvalabs.svgandroid.SVGParser
  */
 package com.larvalabs.svgandroid;

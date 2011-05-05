@@ -85,6 +85,7 @@
         <javadoc
                 sourcepath="src"
                 destdir="docs">
+            <classpath path="${sdk.dir}/platforms/android-4/android.jar"/>
         </javadoc>
     </target>
 

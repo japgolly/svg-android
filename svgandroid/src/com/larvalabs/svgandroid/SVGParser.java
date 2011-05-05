@@ -161,7 +161,6 @@ public class SVGParser {
      * An example path is <code>M250,150L150,350L350,350Z</code>, which draws a triangle.
      *
      * @param pathString the SVG path, see the specification <a href="http://www.w3.org/TR/SVG/paths.html">here</a>.
-     * @return
      */
     public static Path parsePath(String pathString) {
         return doPath(pathString);
