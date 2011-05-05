@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="svgandroid" default="help">
+<project name="svgandroid" default="jar">
 
 <!-- The local.properties file is created and updated by the 'android'
      tool.
@@ -87,6 +87,10 @@
                 destdir="docs">
         </javadoc>
     </target>
+
+	<target name="cleanjar" depends="clean">
+		<delete dir="build"/>
+	</target>
 
     <target name="jar">
         <mkdir dir="build"/>
