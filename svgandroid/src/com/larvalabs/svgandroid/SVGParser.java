@@ -594,6 +594,8 @@ public class SVGParser {
 
         boolean whiteMode = false;
 
+        boolean pushed = false;
+
         HashMap<String, Shader> gradientMap = new HashMap<String, Shader>();
         Gradient gradient = null;
 
@@ -767,6 +769,22 @@ public class SVGParser {
             doLimits(rect.right, rect.bottom);
         }
 
+        private void pushTransform(Attributes atts) {
+            final String transform = getStringAttr("transform", atts);
+            pushed = transform != null;
+            if (pushed) {
+                final Matrix matrix = parseTransform(transform);
+                canvas.save();
+                canvas.concat(matrix);
+            }
+        }
+
+        private void popTransform() {
+            if (pushed) {
+                canvas.restore();
+            }
+        }
+
         @Override
         public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException {
             // Ignore everything but rectangles in bounds mode
@@ -835,6 +853,7 @@ public class SVGParser {
                 }
                 Float width = getFloatAttr("width", atts);
                 Float height = getFloatAttr("height", atts);
+                pushTransform(atts);
                 if (doFill(atts, gradientMap)) {
                     doLimits(x, y, width, height);
                     canvas.drawRect(x, y, x + width, y + height, paint);
@@ -842,21 +861,25 @@ public class SVGParser {
                 if (doStroke(atts)) {
                     canvas.drawRect(x, y, x + width, y + height, paint);
                 }
+                popTransform();
             } else if (!hidden && localName.equals("line")) {
                 Float x1 = getFloatAttr("x1", atts);
                 Float x2 = getFloatAttr("x2", atts);
                 Float y1 = getFloatAttr("y1", atts);
                 Float y2 = getFloatAttr("y2", atts);
                 if (doStroke(atts)) {
+                    pushTransform(atts);
                     doLimits(x1, y1);
                     doLimits(x2, y2);
                     canvas.drawLine(x1, y1, x2, y2, paint);
+                    popTransform();
                 }
             } else if (!hidden && localName.equals("circle")) {
                 Float centerX = getFloatAttr("cx", atts);
                 Float centerY = getFloatAttr("cy", atts);
                 Float radius = getFloatAttr("r", atts);
                 if (centerX != null && centerY != null && radius != null) {
+                    pushTransform(atts);
                     if (doFill(atts, gradientMap)) {
                         doLimits(centerX - radius, centerY - radius);
                         doLimits(centerX + radius, centerY + radius);
@@ -865,6 +888,7 @@ public class SVGParser {
                     if (doStroke(atts)) {
                         canvas.drawCircle(centerX, centerY, radius, paint);
                     }
+                    popTransform();
                 }
             } else if (!hidden && localName.equals("ellipse")) {
                 Float centerX = getFloatAttr("cx", atts);
@@ -872,6 +896,7 @@ public class SVGParser {
                 Float radiusX = getFloatAttr("rx", atts);
                 Float radiusY = getFloatAttr("ry", atts);
                 if (centerX != null && centerY != null && radiusX != null && radiusY != null) {
+                    pushTransform(atts);
                     rect.set(centerX - radiusX, centerY - radiusY, centerX + radiusX, centerY + radiusY);
                     if (doFill(atts, gradientMap)) {
                         doLimits(centerX - radiusX, centerY - radiusY);
@@ -881,6 +906,7 @@ public class SVGParser {
                     if (doStroke(atts)) {
                         canvas.drawOval(rect, paint);
                     }
+                    popTransform();
                 }
             } else if (!hidden && (localName.equals("polygon") || localName.equals("polyline"))) {
                 NumberParse numbers = getNumberParseAttr("points", atts);
@@ -888,6 +914,7 @@ public class SVGParser {
                     Path p = new Path();
                     ArrayList<Float> points = numbers.numbers;
                     if (points.size() > 1) {
+                        pushTransform(atts);
                         p.moveTo(points.get(0), points.get(1));
                         for (int i = 2; i < points.size(); i += 2) {
                             float x = points.get(i);
@@ -905,10 +932,12 @@ public class SVGParser {
                         if (doStroke(atts)) {
                             canvas.drawPath(p, paint);
                         }
+                        popTransform();
                     }
                 }
             } else if (!hidden && localName.equals("path")) {
                 Path p = doPath(getStringAttr("d", atts));
+                pushTransform(atts);
                 if (doFill(atts, gradientMap)) {
                     doLimits(p);
                     canvas.drawPath(p, paint);
@@ -916,6 +945,7 @@ public class SVGParser {
                 if (doStroke(atts)) {
                     canvas.drawPath(p, paint);
                 }
+                popTransform();
             } else if (!hidden) {
                 Log.d(TAG, "UNRECOGNIZED SVG COMMAND: " + localName);
             }
