@@ -530,7 +530,7 @@ public class SVGParser {
             if (v.endsWith("px")) {
                 v = v.substring(0, v.length() - 2);
             }
-            //Util.debug("Float parsing '" + name + "=" + v + "'");
+//            Log.d(TAG, "Float parsing '" + name + "=" + v + "'");
             return Float.parseFloat(v);
         }
     }
