@@ -787,6 +787,8 @@ public class SVGParser {
 
         @Override
         public void startElement(String namespaceURI, String localName, String qName, Attributes atts) throws SAXException {
+            // Reset paint opacity
+            paint.setAlpha(255);
             // Ignore everything but rectangles in bounds mode
             if (boundsMode) {
                 if (localName.equals("rect")) {
