@@ -298,6 +298,7 @@ public class ParserHelper {
     }
 
     public float nextFloat() {
+        skipWhitespace();
         float f = parseFloat();
         skipNumberSeparator();
         return f;

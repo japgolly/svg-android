@@ -69,6 +69,29 @@ public class SVG {
      */
     public PictureDrawable createPictureDrawable() {
         return new PictureDrawable(picture);
+//        return new PictureDrawable(picture) {
+//            @Override
+//            public int getIntrinsicWidth() {
+//                if (bounds != null) {
+//                    return (int) bounds.width();
+//                } else if (limits != null) {
+//                    return (int) limits.width();
+//                } else {
+//                    return -1;
+//                }
+//            }
+//
+//            @Override
+//            public int getIntrinsicHeight() {
+//                if (bounds != null) {
+//                    return (int) bounds.height();
+//                } else if (limits != null) {
+//                    return (int) limits.height();
+//                } else {
+//                    return -1;
+//                }
+//            }
+//        };
     }
 
     /**
