@@ -99,7 +99,6 @@ public class ParserHelper {
         case '+':
             current = read();
         }
-
         m1: switch (current) {
         default:
             return Float.NaN;
