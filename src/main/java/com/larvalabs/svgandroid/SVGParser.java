@@ -695,16 +695,23 @@ public class SVGParser {
             String v = getAttr(name);
             if (v == null) {
                 return null;
-            } else if (v.startsWith("#")) {
+            } else if (v.startsWith("#") && (v.length() == 4 || v.length() == 7)) {
                 try {
-                    return Integer.parseInt(v.substring(1), 16);
+                    int result = Integer.parseInt(v.substring(1), 16);
+                    return v.length() == 4 ? hex3Tohex6(result) : result;
                 } catch (NumberFormatException nfe) {
-                    // todo - parse word-based color here
                     return null;
                 }
             } else {
                 return SVGColors.mapColor(v);
             }
+        }
+
+        // convert 0xRGB into 0xRRGGBB
+        private int hex3Tohex6(int x) {
+            return  (x & 0xF00) << 8 | (x & 0xF00) << 12 |
+            (x & 0xF0) << 4 | (x & 0xF0) << 8 |
+            (x & 0xF) << 4 | (x & 0xF);
         }
 
         @SuppressWarnings("unused")
