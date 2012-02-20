@@ -44,13 +44,12 @@ import java.util.HashMap;
  * Optionally, a single color can be searched and replaced in the SVG while parsing.
  * You can also parse an svg path directly.
  *
+ * @author Larva Labs, LLC
  * @see #getSVGFromResource(android.content.res.Resources, int)
  * @see #getSVGFromAsset(android.content.res.AssetManager, String)
  * @see #getSVGFromString(String)
  * @see #getSVGFromInputStream(java.io.InputStream)
  * @see #parsePath(String)
- *
- * @author Larva Labs, LLC
  */
 public class SVGParser {
 
@@ -58,6 +57,7 @@ public class SVGParser {
 
     /**
      * Parse SVG data from an input stream.
+     *
      * @param svgData the input stream, with SVG XML data in UTF-8 character encoding.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
@@ -68,6 +68,7 @@ public class SVGParser {
 
     /**
      * Parse SVG data from a string.
+     *
      * @param svgData the string containing SVG XML data.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
@@ -78,8 +79,9 @@ public class SVGParser {
 
     /**
      * Parse SVG data from an Android application resource.
+     *
      * @param resources the Android context resources.
-     * @param resId the ID of the raw resource SVG.
+     * @param resId     the ID of the raw resource SVG.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
      */
@@ -89,11 +91,12 @@ public class SVGParser {
 
     /**
      * Parse SVG data from an Android application asset.
+     *
      * @param assetMngr the Android asset manager.
-     * @param svgPath the path to the SVG file in the application's assets.
+     * @param svgPath   the path to the SVG file in the application's assets.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
-     * @throws IOException if there was a problem reading the file.
+     * @throws IOException       if there was a problem reading the file.
      */
     public static SVG getSVGFromAsset(AssetManager assetMngr, String svgPath) throws SVGParseException, IOException {
         InputStream inputStream = assetMngr.open(svgPath);
@@ -104,8 +107,9 @@ public class SVGParser {
 
     /**
      * Parse SVG data from an input stream, replacing a single color with another color.
-     * @param svgData the input stream, with SVG XML data in UTF-8 character encoding.
-     * @param searchColor the color in the SVG to replace.
+     *
+     * @param svgData      the input stream, with SVG XML data in UTF-8 character encoding.
+     * @param searchColor  the color in the SVG to replace.
      * @param replaceColor the color with which to replace the search color.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
@@ -116,8 +120,9 @@ public class SVGParser {
 
     /**
      * Parse SVG data from a string.
-     * @param svgData the string containing SVG XML data.
-     * @param searchColor the color in the SVG to replace.
+     *
+     * @param svgData      the string containing SVG XML data.
+     * @param searchColor  the color in the SVG to replace.
      * @param replaceColor the color with which to replace the search color.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
@@ -128,9 +133,10 @@ public class SVGParser {
 
     /**
      * Parse SVG data from an Android application resource.
-     * @param resources the Android context
-     * @param resId the ID of the raw resource SVG.
-     * @param searchColor the color in the SVG to replace.
+     *
+     * @param resources    the Android context
+     * @param resId        the ID of the raw resource SVG.
+     * @param searchColor  the color in the SVG to replace.
      * @param replaceColor the color with which to replace the search color.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
@@ -141,13 +147,14 @@ public class SVGParser {
 
     /**
      * Parse SVG data from an Android application asset.
-     * @param assetMngr the Android asset manager.
-     * @param svgPath the path to the SVG file in the application's assets.
-     * @param searchColor the color in the SVG to replace.
+     *
+     * @param assetMngr    the Android asset manager.
+     * @param svgPath      the path to the SVG file in the application's assets.
+     * @param searchColor  the color in the SVG to replace.
      * @param replaceColor the color with which to replace the search color.
      * @return the parsed SVG.
      * @throws SVGParseException if there is an error while parsing.
-     * @throws IOException if there was a problem reading the file.
+     * @throws IOException       if there was a problem reading the file.
      */
     public static SVG getSVGFromAsset(AssetManager assetMngr, String svgPath, int searchColor, int replaceColor) throws SVGParseException, IOException {
         InputStream inputStream = assetMngr.open(svgPath);
@@ -383,10 +390,40 @@ public class SVGParser {
         float lastY = 0;
         float lastX1 = 0;
         float lastY1 = 0;
+        float subPathStartX = 0;
+        float subPathStartY = 0;
+        char prevCmd = 0;
         while (ph.pos < n) {
             char cmd = s.charAt(ph.pos);
-            //Util.debug("* Commands remaining: '" + path + "'.");
-            ph.advance();
+            switch (cmd) {
+                case '-':
+                case '+':
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    if (prevCmd == 'm' || prevCmd == 'M') {
+                        cmd = (char) (((int) prevCmd) - 1);
+                        break;
+                    } else if (prevCmd == 'c' || prevCmd == 'C') {
+                        cmd = prevCmd;
+                        break;
+                    } else if (prevCmd == 'l' || prevCmd == 'L') {
+                        cmd = prevCmd;
+                        break;
+                    }
+                default: {
+                    ph.advance();
+                    prevCmd = cmd;
+                }
+            }
+
             boolean wasCurve = false;
             switch (cmd) {
                 case 'M':
@@ -394,10 +431,14 @@ public class SVGParser {
                     float x = ph.nextFloat();
                     float y = ph.nextFloat();
                     if (cmd == 'm') {
+                        subPathStartX += x;
+                        subPathStartY += y;
                         p.rMoveTo(x, y);
                         lastX += x;
                         lastY += y;
                     } else {
+                        subPathStartX = x;
+                        subPathStartY = y;
                         p.moveTo(x, y);
                         lastX = x;
                         lastY = y;
@@ -407,6 +448,12 @@ public class SVGParser {
                 case 'Z':
                 case 'z': {
                     p.close();
+                    p.moveTo(subPathStartX, subPathStartY);
+                    lastX = subPathStartX;
+                    lastY = subPathStartY;
+                    lastX1 = subPathStartX;
+                    lastY1 = subPathStartY;
+                    wasCurve = true;
                     break;
                 }
                 case 'L':
@@ -1156,6 +1203,12 @@ public class SVGParser {
                 }
             } else if (localName.equals("radialGradient")) {
                 if (gradient.id != null) {
+                    if (gradient.xlink != null) {
+                        Gradient parent = gradientRefMap.get(gradient.xlink);
+                        if (parent != null) {
+                            gradient = parent.createChild(gradient);
+                        }
+                    }
                     int[] colors = new int[gradient.colors.size()];
                     for (int i = 0; i < colors.length; i++) {
                         colors[i] = gradient.colors.get(i);
