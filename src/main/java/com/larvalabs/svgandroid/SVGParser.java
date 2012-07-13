@@ -209,7 +209,7 @@ public class SVGParser {
                         0,
                         1,
                 });
-                matrix.postConcat(mat);
+                matrix.preConcat(mat);
             }
         } else if (s.startsWith("translate(")) {
             NumberParse np = parseNumbers(s.substring("translate(".length()));
@@ -219,7 +219,7 @@ public class SVGParser {
                 if (np.numbers.size() > 1) {
                     ty = np.numbers.get(1);
                 }
-                matrix.postTranslate(tx, ty);
+                matrix.preTranslate(tx, ty);
             }
         } else if (s.startsWith("scale(")) {
             NumberParse np = parseNumbers(s.substring("scale(".length()));
@@ -229,19 +229,19 @@ public class SVGParser {
                 if (np.numbers.size() > 1) {
                     sy = np.numbers.get(1);
                 }
-                matrix.postScale(sx, sy);
+                matrix.preScale(sx, sy);
             }
         } else if (s.startsWith("skewX(")) {
             NumberParse np = parseNumbers(s.substring("skewX(".length()));
             if (np.numbers.size() > 0) {
                 float angle = np.numbers.get(0);
-                matrix.postSkew((float) Math.tan(angle), 0);
+                matrix.preSkew((float) Math.tan(angle), 0);
             }
         } else if (s.startsWith("skewY(")) {
             NumberParse np = parseNumbers(s.substring("skewY(".length()));
             if (np.numbers.size() > 0) {
                 float angle = np.numbers.get(0);
-                matrix.postSkew(0, (float) Math.tan(angle));
+                matrix.preSkew(0, (float) Math.tan(angle));
             }
         } else if (s.startsWith("rotate(")) {
             NumberParse np = parseNumbers(s.substring("rotate(".length()));
@@ -253,9 +253,9 @@ public class SVGParser {
                     cx = np.numbers.get(1);
                     cy = np.numbers.get(2);
                 }
-                matrix.postTranslate(-cx, -cy);
-                matrix.postRotate(angle);
-                matrix.postTranslate(cx, cy);
+                matrix.preTranslate(cx, cy);
+                matrix.preRotate(angle);
+                matrix.preTranslate(-cx, -cy);
             }
         } else {
             Log.i(TAG, "Invalid transform (" + s + ")");
