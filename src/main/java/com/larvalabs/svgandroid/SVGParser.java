@@ -28,6 +28,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.text.TextUtils;
 import android.util.Log;
 
 /*
@@ -767,7 +768,7 @@ public class SVGParser {
         HashMap<String, Shader> gradientMap = new HashMap<String, Shader>();
         HashMap<String, Gradient> gradientRefMap = new HashMap<String, Gradient>();
         Gradient gradient = null;
-        SvgText text = null;
+        final Stack<SvgText> textStack = new Stack<SvgText>();
 
         public SVGHandler() {
             strokePaint = new Paint();
@@ -1301,8 +1302,18 @@ public class SVGParser {
                 }
                 popTransform();
             } else if (!hidden && localName.equals("text")) {
-                pushTransform(atts);
-                text = new SvgText(atts);
+                if (textStack.isEmpty()) {
+                    pushTransform(atts);
+                    textStack.push(new SvgText(atts));
+                } else {
+                    Log.w(TAG, "Cannot process <text> tag nested inside another <text> tag");
+                }
+            } else if (!hidden && localName.equals("tspan")) {
+                if (!textStack.isEmpty()) {
+                    textStack.push(new SvgText(atts));
+                } else {
+                    Log.w(TAG, "Cannot process <tspan> tag outside of <text> tag");
+                }
             } else if (!hidden) {
                 Log.d(TAG, "UNRECOGNIZED SVG COMMAND: " + localName);
             }
@@ -1327,8 +1338,8 @@ public class SVGParser {
         @Override
         public void characters(char ch[], int start, int length) {
             // Log.i(TAG, new String(ch) + " " + start + "/" + length);
-            if (text != null) {
-                text.setText(ch, start, length);
+            if (!textStack.isEmpty()) {
+                textStack.peek().setText(ch, start, length);
             }
         }
 
@@ -1337,12 +1348,14 @@ public class SVGParser {
                 throws SAXException {
             if (localName.equals("svg")) {
                 picture.endRecording();
-            } else if (localName.equals("text")) {
-                if (text != null) {
+            } else if (localName.equals("text") || localName.equals("tspan")) {
+                if (!textStack.isEmpty()) {
+                    SvgText text = textStack.pop();
                     text.render(canvas);
-                    text.close();
                 }
-                popTransform();
+                if (localName.equals("text")) {
+                    popTransform();
+                }
             } else if (localName.equals("linearGradient")) {
                 if (gradient.id != null) {
                     if (gradient.xlink != null) {
@@ -1427,7 +1440,6 @@ public class SVGParser {
             private Paint stroke = null, fill = null;
             private float x, y;
             private String svgText;
-            private boolean inText;
             private int vAlign = 0;
 
             public SvgText(Attributes atts) {
@@ -1435,7 +1447,6 @@ public class SVGParser {
                 x = getFloatAttr("x", atts, 0f);
                 y = getFloatAttr("y", atts, 0f);
                 svgText = null;
-                inText = true;
 
                 Properties props = new Properties(atts);
                 if (doFill(props, gradientMap)) {
@@ -1454,42 +1465,34 @@ public class SVGParser {
                     vAlign = TOP;
                 }
             }
-            // ignore tspan elements for now
+
             public void setText(char[] ch, int start, int len) {
-                if (isInText()) {
-                    if (svgText == null) {
-                        svgText = new String(ch, start, len);
-                    } else {
-                        svgText += new String(ch, start, len);
-                    }
-
-                    // This is an experiment for vertical alignment
-                    if (vAlign > 0) {
-                        Paint paint = stroke == null ? fill : stroke;
-                        Rect bnds = new Rect();
-                        paint.getTextBounds(svgText, 0, svgText.length(), bnds);
-                        // Log.i(TAG, "Adjusting " + y + " by " + bnds);
-                        y += (vAlign == MIDDLE) ? -bnds.centerY() : bnds.height();
-                    }
+                if (svgText == null) {
+                    svgText = new String(ch, start, len);
+                } else {
+                    svgText += new String(ch, start, len);
                 }
-            }
 
-            public boolean isInText() {
-                return inText;
-            }
-
-            public void close() {
-                inText = false;
+                // This is an experiment for vertical alignment
+                if (vAlign > 0) {
+                    Paint paint = stroke == null ? fill : stroke;
+                    Rect bnds = new Rect();
+                    paint.getTextBounds(svgText, 0, svgText.length(), bnds);
+                    // Log.i(TAG, "Adjusting " + y + " by " + bnds);
+                    y += (vAlign == MIDDLE) ? -bnds.centerY() : bnds.height();
+                }
             }
 
             public void render(Canvas canvas) {
-                if (fill != null) {
-                    canvas.drawText(svgText, x, y, fill);
-                }
-                if (stroke != null) {
-                    canvas.drawText(svgText, x, y, stroke);
-                }
                 // Log.i(TAG, "Drawing: " + svgText + " " + x + "," + y);
+                if (svgText != null) {
+                    if (fill != null) {
+                        canvas.drawText(svgText, x, y, fill);
+                    }
+                    if (stroke != null) {
+                        canvas.drawText(svgText, x, y, stroke);
+                    }
+                }
             }
         }
 
