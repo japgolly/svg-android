@@ -116,7 +116,8 @@ public class SVGBuilder {
 			handler.setColorSwap(searchColor, replaceColor);
 			handler.setWhiteMode(whiteMode);
 			if (colorFilter != null) {
-				handler.paint.setColorFilter(colorFilter);
+				handler.strokePaint.setColorFilter(colorFilter);
+				handler.fillPaint.setColorFilter(colorFilter);
 			}
 
 			return SVGParser.parse(new InputSource(data), handler);
