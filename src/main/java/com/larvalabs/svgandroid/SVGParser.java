@@ -554,13 +554,14 @@ public class SVGParser {
         String v = getStringAttr(name, attributes);
         if (v == null) {
             return defaultValue;
-        } else {
-            if (v.endsWith("px")) {
+        } else if (v.endsWith("px")) {
                 v = v.substring(0, v.length() - 2);
-            }
-//            Log.d(TAG, "Float parsing '" + name + "=" + v + "'");
-            return Float.parseFloat(v);
+        } else if (v.endsWith("%")) {
+        	v = v.substring(0, v.length() - 1);
+        	return Float.parseFloat(v)/100;
         }
+//            Log.d(TAG, "Float parsing '" + name + "=" + v + "'");
+        return Float.parseFloat(v);
     }
 
     private static Integer getHexAttr(String name, Attributes attributes) {
@@ -606,6 +607,9 @@ public class SVGParser {
         ArrayList<Float> positions = new ArrayList<Float>();
         ArrayList<Integer> colors = new ArrayList<Integer>();
         Matrix matrix = null;
+        public Shader shader = null;
+		public boolean boundingBox = false;
+		public String spreadMethod = "";
 
         public Gradient createChild(Gradient g) {
             Gradient child = new Gradient();
@@ -631,6 +635,9 @@ public class SVGParser {
                     child.matrix = m;
                 }
             }
+            child.boundingBox = g.boundingBox;
+            child.shader = g.shader;
+            child.spreadMethod = g.spreadMethod;
             return child;
         }
     }
@@ -734,8 +741,7 @@ public class SVGParser {
 
         Stack<Boolean> transformStack = new Stack<Boolean>();
 
-        HashMap<String, Shader> gradientMap = new HashMap<String, Shader>();
-        HashMap<String, Gradient> gradientRefMap = new HashMap<String, Gradient>();
+        HashMap<String, Gradient> gradientMap = new HashMap<String, Gradient>();
         Gradient gradient = null;
 
         public SVGHandler() {
@@ -766,7 +772,9 @@ public class SVGParser {
             // Clean up after parsing a doc
         }
 
-        private boolean doFill(Properties atts, HashMap<String, Shader> gradients) {
+        private final Matrix gradMatrix=new Matrix();
+        
+        private boolean doFill(Properties atts, RectF bounding_box) {
             if ("none".equals(atts.getString("display"))) {
                 return false;
             }
@@ -779,11 +787,20 @@ public class SVGParser {
             if (fillString != null && fillString.startsWith("url(#")) {
                 // It's a gradient fill, look it up in our map
                 String id = fillString.substring("url(#".length(), fillString.length() - 1);
-                Shader shader = gradients.get(id);
+                Gradient g=gradientMap.get(id);
+                Shader shader = null;
+                if (g != null) shader=g.shader;
                 if (shader != null) {
                     //Util.debug("Found shader!");
                     paint.setShader(shader);
                     paint.setStyle(Paint.Style.FILL);
+                    gradMatrix.set(g.matrix);
+                    if (g.boundingBox) {
+//                    	Log.d("svg", "gradient is bounding box");
+                    	gradMatrix.preTranslate(bounding_box.left, bounding_box.top);
+                    	gradMatrix.preScale(bounding_box.width(), bounding_box.height());
+                    }
+                	shader.setLocalMatrix(gradMatrix);
                     return true;
                 } else {
                     //Util.debug("Didn't find shader!");
@@ -852,7 +869,7 @@ public class SVGParser {
             gradient.isLinear = isLinear;
             if (isLinear) {
                 gradient.x1 = getFloatAttr("x1", atts, 0f);
-                gradient.x2 = getFloatAttr("x2", atts, 0f);
+                gradient.x2 = getFloatAttr("x2", atts, 1f);
                 gradient.y1 = getFloatAttr("y1", atts, 0f);
                 gradient.y2 = getFloatAttr("y2", atts, 0f);
             } else {
@@ -864,6 +881,14 @@ public class SVGParser {
             if (transform != null) {
                 gradient.matrix = parseTransform(transform);
             }
+            String spreadMethod = getStringAttr("spreadMethod", atts);
+            if (spreadMethod==null) spreadMethod="pad";
+            gradient.spreadMethod=spreadMethod;
+            
+            String unit = getStringAttr("gradientUnits", atts);
+            if (unit==null) unit="objectBoundingBox";
+            gradient.boundingBox = !unit.equals("userSpaceOnUse");
+
             String xlink = getStringAttr("href", atts);
             if (xlink != null) {
                 if (xlink.startsWith("#")) {
@@ -879,6 +904,7 @@ public class SVGParser {
             if (searchColor != null && searchColor.intValue() == c) {
                 c = replaceColor;
             }
+            paint.setShader(null);
             paint.setColor(c);
             Float opacity = atts.getFloat("opacity");
             if (opacity == null) {
@@ -910,6 +936,12 @@ public class SVGParser {
             }
         }
 
+        private void doLimits(RectF box)
+        {
+        	doLimits(box.left, box.top);
+        	doLimits(box.right, box.bottom);
+        }
+/*        
         private void doLimits(float x, float y, float width, float height) {
             doLimits(x, y);
             doLimits(x + width, y + height);
@@ -920,7 +952,7 @@ public class SVGParser {
             doLimits(rect.left, rect.top);
             doLimits(rect.right, rect.bottom);
         }
-
+*/
         private void pushTransform(Attributes atts) {
             final String transform = getStringAttr("transform", atts);
             boolean pushed = transform != null;
@@ -974,8 +1006,10 @@ public class SVGParser {
                 if (gradient != null) {
                     float offset = getFloatAttr("offset", atts);
                     String styles = getStringAttr("style", atts);
-                    StyleSet styleSet = new StyleSet(styles);
-                    String colorStyle = styleSet.getStyle("stop-color");
+                    StyleSet styleSet=null;
+                    if (styles!=null) styleSet = new StyleSet(styles);
+                    String colorStyle = getStringAttr("stop-color", atts);
+                    if (colorStyle==null && styleSet!=null) colorStyle=styleSet.getStyle("stop-color");
                     int color = Color.BLACK;
                     if (colorStyle != null) {
                         if (colorStyle.startsWith("#")) {
@@ -984,7 +1018,8 @@ public class SVGParser {
                             color = Integer.parseInt(colorStyle, 16);
                         }
                     }
-                    String opacityStyle = styleSet.getStyle("stop-opacity");
+                    String opacityStyle = getStringAttr("stop-opacity", atts);
+                    if (opacityStyle==null && styleSet!=null) colorStyle=styleSet.getStyle("stop-opacity");
                     if (opacityStyle != null) {
                         float alpha = Float.parseFloat(opacityStyle);
                         int alphaInt = Math.round(255 * alpha);
@@ -1026,12 +1061,13 @@ public class SVGParser {
                 Float height = getFloatAttr("height", atts);
                 pushTransform(atts);
                 Properties props = new Properties(atts);
-                if (doFill(props, gradientMap)) {
-                    doLimits(x, y, width, height);
-                    canvas.drawRect(x, y, x + width, y + height, paint);
+                rect.set(x, y, x+width, y+height);
+                doLimits(rect);
+                if (doFill(props, rect)) {
+                    canvas.drawRect(rect, paint);
                 }
                 if (doStroke(props)) {
-                    canvas.drawRect(x, y, x + width, y + height, paint);
+                    canvas.drawRect(rect, paint);
                 }
                 popTransform();
             } else if (!hidden && localName.equals("line")) {
@@ -1042,8 +1078,8 @@ public class SVGParser {
                 Properties props = new Properties(atts);
                 if (doStroke(props)) {
                     pushTransform(atts);
-                    doLimits(x1, y1);
-                    doLimits(x2, y2);
+                    rect.set(x1,y1,x2,y2);
+                    doLimits(rect);
                     canvas.drawLine(x1, y1, x2, y2, paint);
                     popTransform();
                 }
@@ -1054,9 +1090,9 @@ public class SVGParser {
                 if (centerX != null && centerY != null && radius != null) {
                     pushTransform(atts);
                     Properties props = new Properties(atts);
-                    if (doFill(props, gradientMap)) {
-                        doLimits(centerX - radius, centerY - radius);
-                        doLimits(centerX + radius, centerY + radius);
+                    rect.set(centerX - radius, centerY - radius, centerX + radius, centerY + radius);
+                    doLimits(rect);
+                    if (doFill(props, rect)) {
                         canvas.drawCircle(centerX, centerY, radius, paint);
                     }
                     if (doStroke(props)) {
@@ -1073,9 +1109,8 @@ public class SVGParser {
                     pushTransform(atts);
                     Properties props = new Properties(atts);
                     rect.set(centerX - radiusX, centerY - radiusY, centerX + radiusX, centerY + radiusY);
-                    if (doFill(props, gradientMap)) {
-                        doLimits(centerX - radiusX, centerY - radiusY);
-                        doLimits(centerX + radiusX, centerY + radiusY);
+                    doLimits(rect);
+                    if (doFill(props, rect)) {
                         canvas.drawOval(rect, paint);
                     }
                     if (doStroke(props)) {
@@ -1101,8 +1136,9 @@ public class SVGParser {
                         if (localName.equals("polygon")) {
                             p.close();
                         }
-                        if (doFill(props, gradientMap)) {
-                            doLimits(p);
+                        p.computeBounds(rect, false);
+                        doLimits(rect);
+                        if (doFill(props, rect)) {
                             canvas.drawPath(p, paint);
                         }
                         if (doStroke(props)) {
@@ -1115,8 +1151,9 @@ public class SVGParser {
                 Path p = doPath(getStringAttr("d", atts));
                 pushTransform(atts);
                 Properties props = new Properties(atts);
-                if (doFill(props, gradientMap)) {
-                    doLimits(p);
+                p.computeBounds(rect, false);
+                doLimits(rect);
+                if (doFill(props, rect)) {
                     canvas.drawPath(p, paint);
                 }
                 if (doStroke(props)) {
@@ -1141,7 +1178,7 @@ public class SVGParser {
             } else if (localName.equals("linearGradient")) {
                 if (gradient.id != null) {
                     if (gradient.xlink != null) {
-                        Gradient parent = gradientRefMap.get(gradient.xlink);
+                        Gradient parent = gradientMap.get(gradient.xlink);
                         if (parent != null) {
                             gradient = parent.createChild(gradient);
                         }
@@ -1157,17 +1194,20 @@ public class SVGParser {
                     if (colors.length == 0) {
                         Log.d("BAD", "BAD");
                     }
-                    LinearGradient g = new LinearGradient(gradient.x1, gradient.y1, gradient.x2, gradient.y2, colors, positions, Shader.TileMode.CLAMP);
-                    if (gradient.matrix != null) {
-                        g.setLocalMatrix(gradient.matrix);
-                    }
-                    gradientMap.put(gradient.id, g);
-                    gradientRefMap.put(gradient.id, gradient);
+                    //Log.d("gradient","creating linear gradient "+gradient.x1+" "+gradient.y1+" "+ gradient.x2+" "+gradient.y2)
+                    Shader.TileMode  tilemode=
+                    		(gradient.spreadMethod.equals("reflect"))?Shader.TileMode.MIRROR:
+                    		(gradient.spreadMethod.equals("repeat"))?Shader.TileMode.REPEAT:
+                    												Shader.TileMode.CLAMP;
+//                    Log.d("gradient","spread="+gradient.spreadMethod);
+                    LinearGradient g = new LinearGradient(gradient.x1, gradient.y1, gradient.x2, gradient.y2, colors, positions, tilemode);
+                    gradient.shader=g;
+                    gradientMap.put(gradient.id, gradient);
                 }
             } else if (localName.equals("radialGradient")) {
                 if (gradient.id != null) {
                     if (gradient.xlink != null) {
-                        Gradient parent = gradientRefMap.get(gradient.xlink);
+                        Gradient parent = gradientMap.get(gradient.xlink);
                         if (parent != null) {
                             gradient = parent.createChild(gradient);
                         }
@@ -1181,7 +1221,7 @@ public class SVGParser {
                         positions[i] = gradient.positions.get(i);
                     }
                     if (gradient.xlink != null) {
-                        Gradient parent = gradientRefMap.get(gradient.xlink);
+                        Gradient parent = gradientMap.get(gradient.xlink);
                         if (parent != null) {
                             gradient = parent.createChild(gradient);
                         }
@@ -1190,8 +1230,8 @@ public class SVGParser {
                     if (gradient.matrix != null) {
                         g.setLocalMatrix(gradient.matrix);
                     }
-                    gradientMap.put(gradient.id, g);
-                    gradientRefMap.put(gradient.id, gradient);
+                    gradient.shader=g;
+                    gradientMap.put(gradient.id, gradient);
                 }
             } else if (localName.equals("g")) {
                 if (boundsMode) {
@@ -1205,8 +1245,8 @@ public class SVGParser {
                         hidden = false;
                     }
                 }
-                // Clear gradient map
-                gradientMap.clear();
+//                // Clear gradient map
+//                gradientRefMap.clear();
                 popTransform();
             }
         }
