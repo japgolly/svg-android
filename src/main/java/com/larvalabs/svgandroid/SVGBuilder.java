@@ -2,6 +2,7 @@ package com.larvalabs.svgandroid;
 
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.graphics.ColorFilter;
 import android.util.Log;
 
 import java.io.ByteArrayInputStream;
@@ -22,6 +23,7 @@ public class SVGBuilder {
 	private InputStream data;
 	private Integer searchColor = null;
 	private Integer replaceColor = null;
+	private ColorFilter colorFilter = null;
 	private boolean whiteMode = false;
 	private boolean closeInputStream = true;
 
@@ -85,6 +87,11 @@ public class SVGBuilder {
 		return this;
 	}
 
+	public SVGBuilder setColorFilter(ColorFilter colorFilter) {
+		this.colorFilter = colorFilter;
+		return this;
+	}
+
 	/**
 	 * @param closeInputStream Whether or not to close the input stream after reading (ie. after calling
 	 *            {@link #build()}.
@@ -108,6 +115,9 @@ public class SVGBuilder {
 			SVGHandler handler = new SVGHandler();
 			handler.setColorSwap(searchColor, replaceColor);
 			handler.setWhiteMode(whiteMode);
+			if (colorFilter != null) {
+				handler.paint.setColorFilter(colorFilter);
+			}
 
 			return SVGParser.parse(new InputSource(data), handler);
 
