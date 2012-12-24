@@ -7,4 +7,4 @@ Changes
 * Added SVGBuilder to allow for SVG parsing & rendering options.
 * ColorFilters can now be applied. IMO this replaces the replace-single-colour
   functionality.
-
+* Fixed SVGParser when running with Robolectric.
