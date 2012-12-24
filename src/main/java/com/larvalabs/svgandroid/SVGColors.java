@@ -1,15 +1,18 @@
 package com.larvalabs.svgandroid;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 
 public class SVGColors {
-    private static HashMap<String, Integer> colors = new HashMap<String, Integer>();
+    private static final Map<String, Integer> COLOURS;
 
-    public static Integer mapColor(String color) {
-        return colors.get(color);
+    public static Integer mapColour(String colour) {
+        return COLOURS.get(colour);
     }
 
     static {
+    	Map<String, Integer> colors = new HashMap<String, Integer>();
         colors.put("aliceblue", 0xf0f8ff);
         colors.put("antiquewhite", 0xfaebd7);
         colors.put("aqua", 0x00ffff);
@@ -157,5 +160,6 @@ public class SVGColors {
         colors.put("whitesmoke", 0xf5f5f5);
         colors.put("yellow", 0xffff00);
         colors.put("yellowgreen", 0x9acd32);
+        COLOURS = Collections.unmodifiableMap(colors);
     }
 }

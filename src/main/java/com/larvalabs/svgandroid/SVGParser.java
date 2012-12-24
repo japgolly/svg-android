@@ -736,24 +736,7 @@ public class SVGParser {
 					return null;
 				}
 			} else {
-            	return 
-            			v.equalsIgnoreCase("black")?		rgb(0, 0, 0):		
-            			v.equalsIgnoreCase("green")?		rgb(0, 128, 0):
-            			v.equalsIgnoreCase("silver")?	rgb(192, 192, 192):		
-            			v.equalsIgnoreCase("lime")?		rgb(0, 255, 0):
-            			v.equalsIgnoreCase("gray")?		rgb(128, 128, 128):		
-            			v.equalsIgnoreCase("olive")?		rgb(128, 128, 0):
-            			v.equalsIgnoreCase("white")?		rgb(255, 255, 255):		
-            			v.equalsIgnoreCase("yellow")?	rgb(255, 255, 0):
-            			v.equalsIgnoreCase("maroon")?	rgb(128, 0, 0):		
-            			v.equalsIgnoreCase("navy")?		rgb(0, 0, 128):
-            			v.equalsIgnoreCase("red")?		rgb(255, 0, 0):
-            			v.equalsIgnoreCase("blue")?		rgb(0, 0, 255):
-            			v.equalsIgnoreCase("purple")?	rgb(128, 0, 128):
-            			v.equalsIgnoreCase("teal")?		rgb(0, 128, 128):
-            			v.equalsIgnoreCase("fuchsia")?	rgb(255, 0, 255):
-            			v.equalsIgnoreCase("aqua")?		rgb(0, 255, 255):
-            				null;	
+            	return SVGColors.mapColour(v);
             }
         }
 
