@@ -31,15 +31,17 @@
 		<profile>
 			<id>nexus</id>
 			<activation>
-				<activeByDefault>true</activeByDefault>
+				<property>
+					<name>nexus.url</name>
+				</property>
 			</activation>
 			<distributionManagement>
 				<repository>
-					<id>golly-private-releases</id>
+					<id>nexus-releases</id>
 					<url>${nexus.url}/content/repositories/releases/</url>
 				</repository>
 				<snapshotRepository>
-					<id>golly-private-snapshots</id>
+					<id>nexus-snapshots</id>
 					<url>${nexus.url}/content/repositories/snapshots/</url>
 				</snapshotRepository>
 			</distributionManagement>
