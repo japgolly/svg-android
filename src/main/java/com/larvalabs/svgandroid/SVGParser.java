@@ -62,13 +62,17 @@ public class SVGParser {
 
     static SVG parse(InputSource data, SVGHandler handler) throws SVGParseException {
         try {
+            final Picture picture = new Picture();
+            handler.setPicture(picture);
+
             SAXParserFactory spf = SAXParserFactory.newInstance();
             SAXParser sp = spf.newSAXParser();
             XMLReader xr = sp.getXMLReader();
-            final Picture picture = new Picture();
-            handler.setPicture(picture);
             xr.setContentHandler(handler);
+            xr.setFeature("http://xml.org/sax/features/validation", false);
+            xr.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             xr.parse(data);
+
             SVG result = new SVG(picture, handler.bounds);
             // Skip bounds if it was an empty pic
             if (!Float.isInfinite(handler.limits.top)) {
