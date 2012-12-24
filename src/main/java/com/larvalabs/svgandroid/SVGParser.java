@@ -2,6 +2,7 @@ package com.larvalabs.svgandroid;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Stack;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -198,7 +199,7 @@ public class SVGParser {
             NumberParse np = parseNumbers(s.substring("scale(".length()));
             if (np.numbers.size() > 0) {
                 float sx = np.numbers.get(0);
-                float sy = 0;
+                float sy = sx;
                 if (np.numbers.size() > 1) {
                     sy = np.numbers.get(1);
                 }
@@ -233,9 +234,9 @@ public class SVGParser {
                     cy = np.numbers.get(2);
                 }
                 Matrix matrix = new Matrix();
-                matrix.postTranslate(cx, cy);
-                matrix.postRotate(angle);
                 matrix.postTranslate(-cx, -cy);
+                matrix.postRotate(angle);
+                matrix.postTranslate(cx, cy);
                 return matrix;
             }
         }
@@ -293,10 +294,7 @@ public class SVGParser {
                     if (prevCmd == 'm' || prevCmd == 'M') {
                         cmd = (char) (((int) prevCmd) - 1);
                         break;
-                    } else if (prevCmd == 'c' || prevCmd == 'C') {
-                        cmd = prevCmd;
-                        break;
-                    } else if (prevCmd == 'l' || prevCmd == 'L') {
+                    } else if ( ("lhvcsqta").indexOf( Character.toLowerCase(prevCmd)) >= 0 ) {
                         cmd = prevCmd;
                         break;
                     }
@@ -338,6 +336,9 @@ public class SVGParser {
                     wasCurve = true;
                     break;
                 }
+                case 'T':
+                case 't':
+                	// todo - smooth quadratic Bezier (two parameters)
                 case 'L':
                 case 'l': {
                     float x = ph.nextFloat();
@@ -401,6 +402,9 @@ public class SVGParser {
                     lastY = y;
                     break;
                 }
+                case 'Q':
+                case 'q':
+                	// todo - quadratic Bezier (four parameters)
                 case 'S':
                 case 's': {
                     wasCurve = true;
@@ -408,7 +412,7 @@ public class SVGParser {
                     float y2 = ph.nextFloat();
                     float x = ph.nextFloat();
                     float y = ph.nextFloat();
-                    if (cmd == 's') {
+                    if ( Character.isLowerCase(cmd) ) {
                         x2 += lastX;
                         x += lastX;
                         y2 += lastY;
@@ -657,7 +661,7 @@ public class SVGParser {
 
         boolean whiteMode = false;
 
-        boolean pushed = false;
+        Stack<Boolean> transformStack = new Stack<Boolean>();
 
         HashMap<String, Shader> gradientMap = new HashMap<String, Shader>();
         HashMap<String, Gradient> gradientRefMap = new HashMap<String, Gradient>();
@@ -848,16 +852,18 @@ public class SVGParser {
 
         private void pushTransform(Attributes atts) {
             final String transform = getStringAttr("transform", atts);
-            pushed = transform != null;
+            boolean pushed = transform != null;
+            transformStack.push(pushed);
             if (pushed) {
                 final Matrix matrix = parseTransform(transform);
                 canvas.save();
                 canvas.concat(matrix);
             }
+            	
         }
 
         private void popTransform() {
-            if (pushed) {
+            if (transformStack.pop()) {
                 canvas.restore();
             }
         }
@@ -935,6 +941,7 @@ public class SVGParser {
                         //Util.debug("Hidden up: " + hiddenLevel);
                     }
                 }
+                pushTransform(atts);
             } else if (!hidden && localName.equals("rect")) {
                 Float x = getFloatAttr("x", atts);
                 if (x == null) {
@@ -1129,6 +1136,7 @@ public class SVGParser {
                 }
                 // Clear gradient map
                 gradientMap.clear();
+                popTransform();
             }
         }
     }
