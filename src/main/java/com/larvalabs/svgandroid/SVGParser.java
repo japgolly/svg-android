@@ -9,6 +9,7 @@ import javax.xml.parsers.SAXParserFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXNotRecognizedException;
 import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 
@@ -49,6 +50,8 @@ import android.util.Log;
 public class SVGParser {
 
     static final String TAG = "SVGAndroid";
+    
+    private static boolean DISALLOW_DOCTYPE_DECL = true;
 
     /**
      * Parses a single SVG path and returns it as a <code>android.graphics.Path</code> object.
@@ -70,7 +73,13 @@ public class SVGParser {
             XMLReader xr = sp.getXMLReader();
             xr.setContentHandler(handler);
             xr.setFeature("http://xml.org/sax/features/validation", false);
-            xr.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            if (DISALLOW_DOCTYPE_DECL) {
+            	try {
+            		xr.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            	} catch(SAXNotRecognizedException e) {
+            		DISALLOW_DOCTYPE_DECL = false;
+            	}
+            }
             xr.parse(data);
 
             SVG result = new SVG(picture, handler.bounds);
