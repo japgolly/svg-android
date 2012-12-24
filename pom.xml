@@ -26,5 +26,24 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+
+	<profiles>
+		<profile>
+			<id>nexus</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<distributionManagement>
+				<repository>
+					<id>golly-private-releases</id>
+					<url>${nexus.url}/content/repositories/releases/</url>
+				</repository>
+				<snapshotRepository>
+					<id>golly-private-snapshots</id>
+					<url>${nexus.url}/content/repositories/snapshots/</url>
+				</snapshotRepository>
+			</distributionManagement>
+		</profile>
+	</profiles>
 </project>
 
