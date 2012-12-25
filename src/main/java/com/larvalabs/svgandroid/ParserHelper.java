@@ -1,5 +1,6 @@
 package com.larvalabs.svgandroid;
 
+import java.lang.reflect.Field;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
@@ -17,16 +18,30 @@ package com.larvalabs.svgandroid;
  */
 public class ParserHelper {
 
-	private char current;
-	private CharSequence s;
-	public int pos;
-	private int n;
+	private static final Field STRING_CHARS;
+	static {
+		try {
+			STRING_CHARS = String.class.getDeclaredField("value");
+			STRING_CHARS.setAccessible(true);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
 
-	public ParserHelper(CharSequence s, int pos) {
-		this.s = s;
+	private final char[] s;
+	private final int n;
+	private char current;
+	public int pos;
+
+	public ParserHelper(String str, int pos) {
+		try {
+			this.s = (char[]) STRING_CHARS.get(str);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 		this.pos = pos;
-		n = s.length();
-		current = s.charAt(pos);
+		n = s.length;
+		current = s[pos];
 	}
 
 	private char read() {
@@ -36,13 +51,13 @@ public class ParserHelper {
 		if (pos == n) {
 			return '\0';
 		} else {
-			return s.charAt(pos);
+			return s[pos];
 		}
 	}
 
 	public void skipWhitespace() {
 		while (pos < n) {
-			if (Character.isWhitespace(s.charAt(pos))) {
+			if (Character.isWhitespace(s[pos])) {
 				advance();
 			} else {
 				break;
@@ -52,7 +67,7 @@ public class ParserHelper {
 
 	public void skipNumberSeparator() {
 		while (pos < n) {
-			char c = s.charAt(pos);
+			char c = s[pos];
 			switch (c) {
 			case ' ':
 			case ',':
