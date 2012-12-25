@@ -9,6 +9,7 @@ Changes
   functionality.
 * Fixed SVGParser when running with Robolectric.
 * Handles viewBox SVG attribute.
+* Performance enhancements.
 * Many great fixes from
   [josefpavlik](https://github.com/josefpavlik/svg-android) and
   [mrn](https://github.com/mrn/svg-android)

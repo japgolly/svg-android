@@ -10,6 +10,7 @@ import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Shader.TileMode;
+import android.util.FloatMath;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -483,8 +484,8 @@ public class SVGParser {
 		ry = Math.abs(ry);
 
 		final float thrad = theta * (float) Math.PI / 180;
-		final float st = (float) Math.sin(thrad);
-		final float ct = (float) Math.cos(thrad);
+		final float st = FloatMath.sin(thrad);
+		final float ct = FloatMath.cos(thrad);
 
 		final float xc = (lastX - x) / 2;
 		final float yc = (lastY - y) / 2;
@@ -499,7 +500,7 @@ public class SVGParser {
 		float lambda = (x1ts / rxs + y1ts / rys) * 1.001f; // add 0.1% to be sure that no out of range occurs due to
 															// limited precision
 		if (lambda > 1) {
-			float lambdasr = (float) Math.sqrt(lambda);
+			float lambdasr = FloatMath.sqrt(lambda);
 			rx *= lambdasr;
 			ry *= lambdasr;
 			rxs = rx * rx;
@@ -507,7 +508,7 @@ public class SVGParser {
 		}
 
 		final float R =
-				(float) Math.sqrt((rxs * rys - rxs * y1ts - rys * x1ts) / (rxs * y1ts + rys * x1ts))
+				FloatMath.sqrt((rxs * rys - rxs * y1ts - rys * x1ts) / (rxs * y1ts + rys * x1ts))
 						* ((largeArc == sweepArc) ? -1 : 1);
 		final float cxt = R * rx * y1t / ry;
 		final float cyt = -R * ry * x1t / rx;
@@ -1053,14 +1054,14 @@ public class SVGParser {
 						x2 = parseFloatValue(dims[2], null);
 						y2 = parseFloatValue(dims[3], null);
 						if (x1 != null && x2 != null && y1 != null && y2 != null) {
-							width = (int) Math.ceil(x2 - x1);
-							height = (int) Math.ceil(y2 - y1);
+							width = (int) FloatMath.ceil(x2 - x1);
+							height = (int) FloatMath.ceil(y2 - y1);
 						}
 					}
 				}
 				if (width == -1) {
-					width = (int) Math.ceil(getFloatAttr("width", atts));
-					height = (int) Math.ceil(getFloatAttr("height", atts));
+					width = (int) FloatMath.ceil(getFloatAttr("width", atts));
+					height = (int) FloatMath.ceil(getFloatAttr("height", atts));
 				}
 
 				canvas = picture.beginRecording(width, height);
