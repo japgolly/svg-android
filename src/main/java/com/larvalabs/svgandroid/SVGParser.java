@@ -569,16 +569,20 @@ public class SVGParser {
 
 	private static Float getFloatAttr(String name, Attributes attributes, Float defaultValue) {
 		String v = getStringAttr(name, attributes);
-		if (v == null) {
+		return parseFloatValue(v, defaultValue);
+	}
+
+	private static Float parseFloatValue(String str, Float defaultValue) {
+		if (str == null) {
 			return defaultValue;
-		} else if (v.endsWith("px")) {
-			v = v.substring(0, v.length() - 2);
-		} else if (v.endsWith("%")) {
-			v = v.substring(0, v.length() - 1);
-			return Float.parseFloat(v) / 100;
+		} else if (str.endsWith("px")) {
+			str = str.substring(0, str.length() - 2);
+		} else if (str.endsWith("%")) {
+			str = str.substring(0, str.length() - 1);
+			return Float.parseFloat(str) / 100;
 		}
 		// Log.d(TAG, "Float parsing '" + name + "=" + v + "'");
-		return Float.parseFloat(v);
+		return Float.parseFloat(str);
 	}
 
 	private static class NumberParse {
@@ -768,6 +772,8 @@ public class SVGParser {
 		Integer replaceColor = null;
 
 		boolean whiteMode = false;
+
+		Integer canvasRestoreCount;
 
 		Stack<Boolean> transformStack = new Stack<Boolean>();
 		Stack<Matrix> matrixStack = new Stack<Matrix>();
@@ -1035,9 +1041,36 @@ public class SVGParser {
 				return;
 			}
 			if (localName.equals("svg")) {
-				int width = (int) Math.ceil(getFloatAttr("width", atts));
-				int height = (int) Math.ceil(getFloatAttr("height", atts));
+				Float x1 = null, y1 = null;
+				int width = -1, height = -1;
+				String viewboxStr = getStringAttr("viewBox", atts);
+				if (viewboxStr != null) {
+					String[] dims = viewboxStr.split("\\s+");
+					if (dims.length == 4) {
+						Float x2, y2;
+						x1 = parseFloatValue(dims[0], null);
+						y1 = parseFloatValue(dims[1], null);
+						x2 = parseFloatValue(dims[2], null);
+						y2 = parseFloatValue(dims[3], null);
+						if (x1 != null && x2 != null && y1 != null && y2 != null) {
+							width = (int) Math.ceil(x2 - x1);
+							height = (int) Math.ceil(y2 - y1);
+						}
+					}
+				}
+				if (width == -1) {
+					width = (int) Math.ceil(getFloatAttr("width", atts));
+					height = (int) Math.ceil(getFloatAttr("height", atts));
+				}
+
 				canvas = picture.beginRecording(width, height);
+				if (x1 != null && y1 != null) {
+					canvasRestoreCount = canvas.save();
+					canvas.translate(-x1, -y1);
+				} else {
+					canvasRestoreCount = null;
+				}
+
 			} else if (localName.equals("defs")) {
 				// Ignore
 			} else if (localName.equals("linearGradient")) {
@@ -1192,6 +1225,9 @@ public class SVGParser {
 		@Override
 		public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
 			if (localName.equals("svg")) {
+				if (canvasRestoreCount != null) {
+					canvas.restoreToCount(canvasRestoreCount);
+				}
 				picture.endRecording();
 			} else if (localName.equals("linearGradient") || localName.equals("radialGradient")) {
 				if (gradient.id != null) {
