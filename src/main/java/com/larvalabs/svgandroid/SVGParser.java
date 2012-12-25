@@ -1032,7 +1032,7 @@ public class SVGParser {
                     }
                     Float width = getFloatAttr("width", atts);
                     Float height = getFloatAttr("height", atts);
-                    bounds = new RectF(x, y, x + width, y + width);
+                    bounds = new RectF(x, y, x + width, y + height);
                 }
                 return;
             }
