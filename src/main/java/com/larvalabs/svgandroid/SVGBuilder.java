@@ -9,9 +9,9 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-import com.larvalabs.svgandroid.SVGParser.SVGHandler;
-
 import org.xml.sax.InputSource;
+
+import com.larvalabs.svgandroid.SVGParser.SVGHandler;
 
 /**
  * Builder for reading SVGs. Specify input, specify any parsing options (optional), then call {@link #build()} to parse
