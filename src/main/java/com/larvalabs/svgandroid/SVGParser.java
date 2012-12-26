@@ -167,19 +167,37 @@ public class SVGParser {
 		return new NumberParse(numbers, p);
 	}
 
+	/**
+	 * Parse a list of transforms such as: foo(n,n,n...) bar(n,n,n..._ ...) Delimiters are whitespaces or commas
+	 */
 	private static Matrix parseTransform(String s) {
+		Matrix matrix = new Matrix();
+		while (true) {
+			parseTransformItem(s, matrix);
+			// Log.i(TAG, "Transformed: (" + s + ") " + matrix);
+			int rparen = s.indexOf(")");
+			if (rparen > 0 && s.length() > rparen + 1) {
+				s = s.substring(rparen + 1).replaceFirst("[\\s,]*", "");
+			} else {
+				break;
+			}
+		}
+		return matrix;
+	}
+
+	private static Matrix parseTransformItem(String s, Matrix matrix) {
 		if (s.startsWith("matrix(")) {
 			NumberParse np = parseNumbers(s.substring("matrix(".length()));
 			if (np.numbers.size() == 6) {
-				Matrix matrix = new Matrix();
-				matrix.setValues(new float[] {
+				Matrix mat = new Matrix();
+				mat.setValues(new float[] {
 						// Row 1
 						np.numbers.get(0), np.numbers.get(2), np.numbers.get(4),
 						// Row 2
 						np.numbers.get(1), np.numbers.get(3), np.numbers.get(5),
 						// Row 3
 						0, 0, 1, });
-				return matrix;
+				matrix.preConcat(mat);
 			}
 		} else if (s.startsWith("translate(")) {
 			NumberParse np = parseNumbers(s.substring("translate(".length()));
@@ -189,9 +207,7 @@ public class SVGParser {
 				if (np.numbers.size() > 1) {
 					ty = np.numbers.get(1);
 				}
-				Matrix matrix = new Matrix();
-				matrix.postTranslate(tx, ty);
-				return matrix;
+				matrix.preTranslate(tx, ty);
 			}
 		} else if (s.startsWith("scale(")) {
 			NumberParse np = parseNumbers(s.substring("scale(".length()));
@@ -201,25 +217,19 @@ public class SVGParser {
 				if (np.numbers.size() > 1) {
 					sy = np.numbers.get(1);
 				}
-				Matrix matrix = new Matrix();
-				matrix.postScale(sx, sy);
-				return matrix;
+				matrix.preScale(sx, sy);
 			}
 		} else if (s.startsWith("skewX(")) {
 			NumberParse np = parseNumbers(s.substring("skewX(".length()));
 			if (np.numbers.size() > 0) {
 				float angle = np.numbers.get(0);
-				Matrix matrix = new Matrix();
-				matrix.postSkew((float) Math.tan(angle), 0);
-				return matrix;
+				matrix.preSkew((float) Math.tan(angle), 0);
 			}
 		} else if (s.startsWith("skewY(")) {
 			NumberParse np = parseNumbers(s.substring("skewY(".length()));
 			if (np.numbers.size() > 0) {
 				float angle = np.numbers.get(0);
-				Matrix matrix = new Matrix();
-				matrix.postSkew(0, (float) Math.tan(angle));
-				return matrix;
+				matrix.preSkew(0, (float) Math.tan(angle));
 			}
 		} else if (s.startsWith("rotate(")) {
 			NumberParse np = parseNumbers(s.substring("rotate(".length()));
@@ -231,14 +241,14 @@ public class SVGParser {
 					cx = np.numbers.get(1);
 					cy = np.numbers.get(2);
 				}
-				Matrix matrix = new Matrix();
-				matrix.postTranslate(-cx, -cy);
-				matrix.postRotate(angle);
-				matrix.postTranslate(cx, cy);
-				return matrix;
+				matrix.preTranslate(-cx, -cy);
+				matrix.preRotate(angle);
+				matrix.preTranslate(cx, cy);
 			}
+		} else {
+			Log.i(TAG, "Invalid transform (" + s + ")");
 		}
-		return null;
+		return matrix;
 	}
 
 	/**
