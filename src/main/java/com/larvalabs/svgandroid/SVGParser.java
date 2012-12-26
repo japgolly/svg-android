@@ -1123,14 +1123,14 @@ public class SVGParser {
 			}
 		}
 
-		final private RectF limitRect = new RectF();
+		private final RectF tmpLimitRect = new RectF();
 
 		private void doLimits(RectF box, Paint paint) {
 			Matrix m = matrixStack.peek();
-			m.mapRect(limitRect, box);
+			m.mapRect(tmpLimitRect, box);
 			float width2 = (paint == null) ? 0 : paint.getStrokeWidth() / 2;
-			doLimits2(limitRect.left - width2, limitRect.top - width2);
-			doLimits2(limitRect.right + width2, limitRect.bottom + width2);
+			doLimits2(tmpLimitRect.left - width2, tmpLimitRect.top - width2);
+			doLimits2(tmpLimitRect.right + width2, tmpLimitRect.bottom + width2);
 		}
 
 		private void doLimits(RectF box) {
