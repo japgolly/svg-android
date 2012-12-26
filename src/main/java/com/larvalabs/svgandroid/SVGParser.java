@@ -711,7 +711,7 @@ public class SVGParser {
 		}
 
 		private Integer rgb(int r, int g, int b) {
-			return ((r & 0xff) << 16) | ((g & 0xff) << 8) | ((b & 0xff) << 0);
+			return ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
 		}
 
 		private int parseNum(String v) throws NumberFormatException {
@@ -729,11 +729,7 @@ public class SVGParser {
 			} else if (v.startsWith("#")) {
 				try {
 					int c = Integer.parseInt(v.substring(1), 16);
-					if (v.length() == 4) {
-						// short form color, i.e. #FFF
-						c = (c & 0x0f) * 0x11 + (c & 0xf0) * 0x110 + (c & 0xf00) * 0x1100;
-					}
-					return c;
+					return v.length() == 4 ? hex3Tohex6(c) : c;
 				} catch (NumberFormatException nfe) {
 					return null;
 				}
@@ -749,6 +745,12 @@ public class SVGParser {
 			} else {
 				return SVGColors.mapColour(v);
 			}
+		}
+
+		// convert 0xRGB into 0xRRGGBB
+		private int hex3Tohex6(int x) {
+			return (x & 0xF00) << 8 | (x & 0xF00) << 12 | (x & 0xF0) << 4 | (x & 0xF0) << 8 | (x & 0xF) << 4
+					| (x & 0xF);
 		}
 
 		public Float getFloat(String name, float defaultValue) {
