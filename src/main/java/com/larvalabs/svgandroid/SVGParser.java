@@ -1,6 +1,8 @@
 package com.larvalabs.svgandroid;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -16,6 +18,7 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
+import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
 import javax.xml.parsers.SAXParser;
@@ -780,7 +783,17 @@ public class SVGParser {
 
 		Picture picture;
 		Canvas canvas;
-		Paint paint;
+
+		Paint strokePaint;
+		boolean strokeSet = false;
+		Stack<Paint> strokePaintStack = new Stack<Paint>();
+		Stack<Boolean> strokeSetStack = new Stack<Boolean>();
+
+		Paint fillPaint;
+		boolean fillSet = false;
+		Stack<Paint> fillPaintStack = new Stack<Paint>();
+		Stack<Boolean> fillSetStack = new Stack<Boolean>();
+
 		// Scratch rect (so we aren't constantly making new ones)
 		RectF rect = new RectF();
 		RectF bounds = null;
@@ -801,8 +814,12 @@ public class SVGParser {
 		Gradient gradient = null;
 
 		public SVGHandler() {
-			paint = new Paint();
-			paint.setAntiAlias(true);
+			strokePaint = new Paint();
+			strokePaint.setAntiAlias(true);
+			strokePaint.setStyle(Paint.Style.STROKE);
+			fillPaint = new Paint();
+			fillPaint.setAntiAlias(true);
+			fillPaint.setStyle(Paint.Style.FILL);
 			matrixStack.push(new Matrix());
 		}
 
@@ -836,50 +853,65 @@ public class SVGParser {
 				return false;
 			}
 			if (whiteMode) {
-				paint.setStyle(Paint.Style.FILL);
-				paint.setColor(0xFFFFFFFF);
+				fillPaint.setShader(null);
+				fillPaint.setColor(Color.WHITE);
 				return true;
 			}
 			String fillString = atts.getString("fill");
-			if (fillString != null && fillString.startsWith("url(#")) {
-				// It's a gradient fill, look it up in our map
-				String id = fillString.substring("url(#".length(), fillString.length() - 1);
-				Gradient g = gradientMap.get(id);
-				Shader shader = null;
-				if (g != null) {
-					shader = g.shader;
-				}
-				if (shader != null) {
-					// Util.debug("Found shader!");
-					paint.setShader(shader);
-					paint.setStyle(Paint.Style.FILL);
-					gradMatrix.set(g.matrix);
-					if (g.boundingBox) {
-						// Log.d("svg", "gradient is bounding box");
-						gradMatrix.preTranslate(bounding_box.left, bounding_box.top);
-						gradMatrix.preScale(bounding_box.width(), bounding_box.height());
+			if (fillString != null) {
+				if (fillString.startsWith("url(#")) {
+
+					// It's a gradient fill, look it up in our map
+					String id = fillString.substring("url(#".length(), fillString.length() - 1);
+					Gradient g = gradientMap.get(id);
+					Shader shader = null;
+					if (g != null) {
+						shader = g.shader;
 					}
-					shader.setLocalMatrix(gradMatrix);
+					if (shader != null) {
+						// Util.debug("Found shader!");
+						fillPaint.setShader(shader);
+						gradMatrix.set(g.matrix);
+						if (g.boundingBox && bounding_box != null) {
+							// Log.d("svg", "gradient is bounding box");
+							gradMatrix.preTranslate(bounding_box.left, bounding_box.top);
+							gradMatrix.preScale(bounding_box.width(), bounding_box.height());
+						}
+						shader.setLocalMatrix(gradMatrix);
+						return true;
+					} else {
+						Log.w(TAG, "Didn't find shader, using black: " + id);
+						fillPaint.setShader(null);
+						doColor(atts, Color.BLACK, true, fillPaint);
+						return true;
+					}
+				} else if (fillString.equalsIgnoreCase("none")) {
+					fillPaint.setShader(null);
+					fillPaint.setColor(Color.TRANSPARENT);
 					return true;
 				} else {
-					// Util.debug("Didn't find shader!");
-					return false;
+					fillPaint.setShader(null);
+					Integer color = atts.getColor("fill");
+					if (color != null) {
+						doColor(atts, color, true, fillPaint);
+						return true;
+					} else {
+						Log.w(TAG, "Unrecognized fill color, using black: " + fillString);
+						doColor(atts, Color.BLACK, true, fillPaint);
+						return true;
+					}
 				}
 			} else {
-				paint.setShader(null);
-				Integer color = atts.getColor("fill");
-				if (color != null) {
-					doColor(atts, color, true);
-					paint.setStyle(Paint.Style.FILL);
-					return true;
-				} else if (atts.getString("fill") == null && atts.getString("stroke") == null) {
+				if (fillSet) {
+					// If fill is set, inherit from parent
+					return fillPaint.getColor() != Color.TRANSPARENT; // optimization
+				} else {
 					// Default is black fill
-					paint.setStyle(Paint.Style.FILL);
-					paint.setColor(0xFF000000);
+					fillPaint.setShader(null);
+					fillPaint.setColor(Color.BLACK);
 					return true;
 				}
 			}
-			return false;
 		}
 
 		private boolean doStroke(Properties atts) {
@@ -890,36 +922,59 @@ public class SVGParser {
 			if ("none".equals(atts.getString("display"))) {
 				return false;
 			}
-			Integer color = atts.getColor("stroke");
-			if (color != null) {
-				doColor(atts, color, false);
-				// Check for other stroke attributes
-				Float width = atts.getFloat("stroke-width");
-				// Set defaults
 
-				if (width != null) {
-					paint.setStrokeWidth(width);
-				}
-				String linecap = atts.getString("stroke-linecap");
-				if ("round".equals(linecap)) {
-					paint.setStrokeCap(Paint.Cap.ROUND);
-				} else if ("square".equals(linecap)) {
-					paint.setStrokeCap(Paint.Cap.SQUARE);
-				} else if ("butt".equals(linecap)) {
-					paint.setStrokeCap(Paint.Cap.BUTT);
-				}
-				String linejoin = atts.getString("stroke-linejoin");
-				if ("miter".equals(linejoin)) {
-					paint.setStrokeJoin(Paint.Join.MITER);
-				} else if ("round".equals(linejoin)) {
-					paint.setStrokeJoin(Paint.Join.ROUND);
-				} else if ("bevel".equals(linejoin)) {
-					paint.setStrokeJoin(Paint.Join.BEVEL);
-				}
-				paint.setStyle(Paint.Style.STROKE);
-				return true;
+			// Check for other stroke attributes
+			Float width = atts.getFloat("stroke-width");
+			if (width != null) {
+				strokePaint.setStrokeWidth(width);
 			}
-			return false;
+
+			String linecap = atts.getString("stroke-linecap");
+			if ("round".equals(linecap)) {
+				strokePaint.setStrokeCap(Paint.Cap.ROUND);
+			} else if ("square".equals(linecap)) {
+				strokePaint.setStrokeCap(Paint.Cap.SQUARE);
+			} else if ("butt".equals(linecap)) {
+				strokePaint.setStrokeCap(Paint.Cap.BUTT);
+			}
+
+			String linejoin = atts.getString("stroke-linejoin");
+			if ("miter".equals(linejoin)) {
+				strokePaint.setStrokeJoin(Paint.Join.MITER);
+			} else if ("round".equals(linejoin)) {
+				strokePaint.setStrokeJoin(Paint.Join.ROUND);
+			} else if ("bevel".equals(linejoin)) {
+				strokePaint.setStrokeJoin(Paint.Join.BEVEL);
+			}
+
+			pathStyleHelper(atts.getString("stroke-dasharray"), atts.getString("stroke-dashoffset"));
+
+			String strokeString = atts.getAttr("stroke");
+			if (strokeString != null) {
+				if (strokeString.equalsIgnoreCase("none")) {
+					strokePaint.setColor(Color.TRANSPARENT);
+					return false;
+				} else {
+					Integer color = atts.getColor("stroke");
+					if (color != null) {
+						doColor(atts, color, false, strokePaint);
+						return true;
+					} else {
+						Log.w(TAG, "Unrecognized stroke color, using none: " + strokeString);
+						strokePaint.setColor(Color.TRANSPARENT);
+						return false;
+					}
+				}
+			} else {
+				if (strokeSet) {
+					// Inherit from parent
+					return strokePaint.getColor() != Color.TRANSPARENT; // optimization
+				} else {
+					// Default is none
+					strokePaint.setColor(Color.TRANSPARENT);
+					return false;
+				}
+			}
 		}
 
 		private Gradient doGradient(boolean isLinear, Attributes atts) {
@@ -965,7 +1020,7 @@ public class SVGParser {
 			return gradient;
 		}
 
-		private void doColor(Properties atts, Integer color, boolean fillMode) {
+		private void doColor(Properties atts, Integer color, boolean fillMode, Paint paint) {
 			int c = (0xFFFFFF & color) | 0xFF000000;
 			if (searchColor != null && searchColor.intValue() == c) {
 				c = replaceColor;
@@ -981,6 +1036,57 @@ public class SVGParser {
 			} else {
 				paint.setAlpha((int) (255 * opacity));
 			}
+		}
+
+		/**
+		 * set the path style (if any) stroke-dasharray="n1,n2,..." stroke-dashoffset=n
+		 */
+		private void pathStyleHelper(String style, String offset) {
+			if (style == null) {
+				return;
+			}
+
+			if (style.equals("none")) {
+				strokePaint.setPathEffect(null);
+				return;
+			}
+
+			StringTokenizer st = new StringTokenizer(style, " ,");
+			int count = st.countTokens();
+			float[] intervals = new float[(count & 1) == 1 ? count * 2 : count];
+			float max = 0;
+			float current = 1f;
+			int i = 0;
+			while (st.hasMoreTokens()) {
+				intervals[i++] = current = toFloat(st.nextToken(), current);
+				max += current;
+			}
+
+			// in svg speak, we double the intervals on an odd count
+			for (int start = 0; i < intervals.length; i++, start++) {
+				max += intervals[i] = intervals[start];
+			}
+
+			float off = 0f;
+			if (offset != null) {
+				try {
+					off = Float.parseFloat(offset) % max;
+				} catch (NumberFormatException e) {
+					// ignore
+				}
+			}
+
+			strokePaint.setPathEffect(new DashPathEffect(intervals, off));
+		}
+
+		private static float toFloat(String s, float dflt) {
+			float result = dflt;
+			try {
+				result = Float.parseFloat(s);
+			} catch (NumberFormatException e) {
+				// ignore
+			}
+			return result;
 		}
 
 		private boolean hidden = false;
@@ -1041,7 +1147,8 @@ public class SVGParser {
 		public void startElement(String namespaceURI, String localName, String qName, Attributes atts)
 				throws SAXException {
 			// Reset paint opacity
-			paint.setAlpha(255);
+			strokePaint.setAlpha(255);
+			fillPaint.setAlpha(255);
 			// Ignore everything but rectangles in bounds mode
 			if (boundsMode) {
 				if (localName.equals("rect")) {
@@ -1125,6 +1232,19 @@ public class SVGParser {
 					}
 				}
 				pushTransform(atts);
+				Properties props = new Properties(atts);
+
+				fillPaintStack.push(new Paint(fillPaint));
+				strokePaintStack.push(new Paint(strokePaint));
+				fillSetStack.push(fillSet);
+				strokeSetStack.push(strokeSet);
+
+				doFill(props, null); // Added by mrn but a boundingBox is now required by josef.
+				doStroke(props);
+
+				fillSet |= (props.getString("fill") != null);
+				strokeSet |= (props.getString("stroke") != null);
+
 			} else if (!hidden && localName.equals("rect")) {
 				Float x = getFloatAttr("x", atts);
 				if (x == null) {
@@ -1136,16 +1256,28 @@ public class SVGParser {
 				}
 				Float width = getFloatAttr("width", atts);
 				Float height = getFloatAttr("height", atts);
+				Float rx = getFloatAttr("rx", atts, 0f);
+				Float ry = getFloatAttr("ry", atts, 0f);
 				pushTransform(atts);
 				Properties props = new Properties(atts);
 				rect.set(x, y, x + width, y + height);
 				if (doFill(props, rect)) {
-					canvas.drawRect(rect, paint);
+					rect.set(x, y, x + width, y + height);
+					if (rx <= 0f && ry <= 0f) {
+						canvas.drawRect(rect, fillPaint);
+					} else {
+						canvas.drawRoundRect(rect, rx, ry, fillPaint);
+					}
 					doLimits(rect);
 				}
 				if (doStroke(props)) {
-					canvas.drawRect(rect, paint);
-					doLimits(rect, paint);
+					rect.set(x, y, x + width, y + height);
+					if (rx <= 0f && ry <= 0f) {
+						canvas.drawRect(rect, strokePaint);
+					} else {
+						canvas.drawRoundRect(rect, rx, ry, strokePaint);
+					}
+					doLimits(rect, strokePaint);
 				}
 				popTransform();
 			} else if (!hidden && localName.equals("line")) {
@@ -1157,8 +1289,8 @@ public class SVGParser {
 				if (doStroke(props)) {
 					pushTransform(atts);
 					rect.set(x1, y1, x2, y2);
-					canvas.drawLine(x1, y1, x2, y2, paint);
-					doLimits(rect, paint);
+					canvas.drawLine(x1, y1, x2, y2, strokePaint);
+					doLimits(rect, strokePaint);
 					popTransform();
 				}
 			} else if (!hidden && (localName.equals("circle") || localName.equals("ellipse"))) {
@@ -1178,12 +1310,12 @@ public class SVGParser {
 					Properties props = new Properties(atts);
 					rect.set(centerX - radiusX, centerY - radiusY, centerX + radiusX, centerY + radiusY);
 					if (doFill(props, rect)) {
-						canvas.drawOval(rect, paint);
+						canvas.drawOval(rect, fillPaint);
 						doLimits(rect);
 					}
 					if (doStroke(props)) {
-						canvas.drawOval(rect, paint);
-						doLimits(rect, paint);
+						canvas.drawOval(rect, strokePaint);
+						doLimits(rect, strokePaint);
 					}
 					popTransform();
 				}
@@ -1207,12 +1339,12 @@ public class SVGParser {
 						}
 						p.computeBounds(rect, false);
 						if (doFill(props, rect)) {
-							canvas.drawPath(p, paint);
+							canvas.drawPath(p, fillPaint);
 							doLimits(rect);
 						}
 						if (doStroke(props)) {
-							canvas.drawPath(p, paint);
-							doLimits(rect, paint);
+							canvas.drawPath(p, strokePaint);
+							doLimits(rect, strokePaint);
 						}
 						popTransform();
 					}
@@ -1223,16 +1355,16 @@ public class SVGParser {
 				Properties props = new Properties(atts);
 				p.computeBounds(rect, false);
 				if (doFill(props, rect)) {
-					canvas.drawPath(p, paint);
+					canvas.drawPath(p, fillPaint);
 					doLimits(rect);
 				}
 				if (doStroke(props)) {
-					canvas.drawPath(p, paint);
-					doLimits(rect, paint);
+					canvas.drawPath(p, strokePaint);
+					doLimits(rect, strokePaint);
 				}
 				popTransform();
 			} else if (!hidden) {
-				Log.d(TAG, "UNRECOGNIZED SVG COMMAND: " + localName);
+				Log.w(TAG, "UNRECOGNIZED SVG COMMAND: " + localName);
 			}
 		}
 
@@ -1294,6 +1426,10 @@ public class SVGParser {
 				// // Clear gradient map
 				// gradientRefMap.clear();
 				popTransform();
+				fillPaint = fillPaintStack.pop();
+				fillSet = fillSetStack.pop();
+				strokePaint = strokePaintStack.pop();
+				strokeSet = strokeSetStack.pop();
 			}
 		}
 	}
