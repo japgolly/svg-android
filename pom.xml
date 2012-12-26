@@ -6,6 +6,11 @@
 	<artifactId>svg-android</artifactId>
 	<version>1.2-SNAPSHOT</version>
 
+	<url>https://github.com/japgolly/svg-android</url>
+	<scm>
+		<url>git://github.com/japgolly/svg-android.git</url>
+	</scm>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>1.6</maven.compiler.source>
@@ -18,12 +23,6 @@
 			<artifactId>android</artifactId>
 			<version>2.1_r1</version>
 			<scope>provided</scope>
-		</dependency>
-		<dependency>
-			<groupId>junit</groupId>
-			<artifactId>junit</artifactId>
-			<version>4.11</version>
-			<scope>test</scope>
 		</dependency>
 	</dependencies>
 
@@ -47,5 +46,12 @@
 			</distributionManagement>
 		</profile>
 	</profiles>
-</project>
 
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+</project>
