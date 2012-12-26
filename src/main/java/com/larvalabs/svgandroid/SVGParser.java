@@ -796,8 +796,9 @@ public class SVGParser {
 
 	static class SVGHandler extends DefaultHandler {
 
-		Picture picture;
-		Canvas canvas;
+		private Picture picture;
+		private Canvas canvas;
+		private Float limitsAdjustmentX, limitsAdjustmentY;
 
 		Paint strokePaint;
 		boolean strokeSet = false;
@@ -1182,33 +1183,32 @@ public class SVGParser {
 				return;
 			}
 			if (localName.equals("svg")) {
-				Float x1 = null, y1 = null;
-				int width = -1, height = -1;
+				canvas = null;
 				String viewboxStr = getStringAttr("viewBox", atts);
 				if (viewboxStr != null) {
 					String[] dims = viewboxStr.split("\\s+");
 					if (dims.length == 4) {
-						Float x2, y2;
-						x1 = parseFloatValue(dims[0], null);
-						y1 = parseFloatValue(dims[1], null);
-						x2 = parseFloatValue(dims[2], null);
-						y2 = parseFloatValue(dims[3], null);
+						Float x1 = parseFloatValue(dims[0], null);
+						Float y1 = parseFloatValue(dims[1], null);
+						Float x2 = parseFloatValue(dims[2], null);
+						Float y2 = parseFloatValue(dims[3], null);
 						if (x1 != null && x2 != null && y1 != null && y2 != null) {
-							width = (int) FloatMath.ceil(x2 - x1);
-							height = (int) FloatMath.ceil(y2 - y1);
+							float width = FloatMath.ceil(x2 - x1);
+							float height = FloatMath.ceil(y2 - y1);
+							canvas = picture.beginRecording((int) width, (int) height);
+							canvasRestoreCount = canvas.save();
+							canvas.clipRect(0f, 0f, width, height);
+							limitsAdjustmentX = -x1;
+							limitsAdjustmentY = -y1;
+							canvas.translate(limitsAdjustmentX, limitsAdjustmentY);
 						}
 					}
 				}
-				if (width == -1) {
-					width = (int) FloatMath.ceil(getFloatAttr("width", atts));
-					height = (int) FloatMath.ceil(getFloatAttr("height", atts));
-				}
-
-				canvas = picture.beginRecording(width, height);
-				if (x1 != null && y1 != null) {
-					canvasRestoreCount = canvas.save();
-					canvas.translate(-x1, -y1);
-				} else {
+				// No viewbox
+				if (canvas == null) {
+					int width = (int) FloatMath.ceil(getFloatAttr("width", atts));
+					int height = (int) FloatMath.ceil(getFloatAttr("height", atts));
+					canvas = picture.beginRecording(width, height);
 					canvasRestoreCount = null;
 				}
 
@@ -1394,7 +1394,16 @@ public class SVGParser {
 				if (canvasRestoreCount != null) {
 					canvas.restoreToCount(canvasRestoreCount);
 				}
+				if (limitsAdjustmentX != null) {
+					limits.left += limitsAdjustmentX;
+					limits.right += limitsAdjustmentX;
+				}
+				if (limitsAdjustmentY != null) {
+					limits.top += limitsAdjustmentY;
+					limits.bottom += limitsAdjustmentY;
+				}
 				picture.endRecording();
+
 			} else if (localName.equals("linearGradient") || localName.equals("radialGradient")) {
 				if (gradient.id != null) {
 					if (gradient.xlink != null) {
