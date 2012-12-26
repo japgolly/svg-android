@@ -1,4 +1,4 @@
-This is forked from the awesome but much-neglected:
+This is forked from the awesome but unmaintained:
 http://code.google.com/p/svg-android/
 
 Changes
