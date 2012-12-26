@@ -449,7 +449,7 @@ public class SVGParser {
 				int sweepArc = ph.nextFlag();
 				float x = ph.nextFloat();
 				float y = ph.nextFloat();
-				if (Character.isLowerCase(cmd)) {
+				if (cmd == 'a') {
 					x += lastX;
 					y += lastY;
 				}
@@ -458,6 +458,9 @@ public class SVGParser {
 				lastY = y;
 				break;
 			}
+			default:
+				Log.w(TAG, "Invalid path command: " + cmd);
+				ph.advance();
 			}
 			if (!wasCurve) {
 				lastX1 = lastX;
