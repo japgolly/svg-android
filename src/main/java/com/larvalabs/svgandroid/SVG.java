@@ -2,6 +2,7 @@ package com.larvalabs.svgandroid;
 
 import android.graphics.Picture;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.PictureDrawable;
 
 /*
@@ -23,18 +24,20 @@ public class SVG {
 	/**
 	 * The parsed Picture object.
 	 */
-	private Picture picture;
+	private final Picture picture;
 
 	/**
 	 * These are the bounds for the SVG specified as a hidden "bounds" layer in the SVG.
 	 */
-	private RectF bounds;
+	private final RectF bounds;
 
 	/**
 	 * These are the estimated bounds of the SVG computed from the SVG elements while parsing. Note that this could be
 	 * null if there was a failure to compute limits (ie. an empty SVG).
 	 */
 	private RectF limits = null;
+
+	private PictureDrawable drawable = null;
 
 	/**
 	 * Construct a new SVG.
@@ -57,12 +60,15 @@ public class SVG {
 	}
 
 	/**
-	 * Create a picture drawable from the SVG.
+	 * Get a {@link Drawable} of the SVG.
 	 * 
 	 * @return the PictureDrawable.
 	 */
-	public PictureDrawable createPictureDrawable() {
-		return new PictureDrawable(picture);
+	public PictureDrawable getDrawable() {
+		if (drawable == null) {
+			drawable = new PictureDrawable(picture);
+		}
+		return drawable;
 		// return new PictureDrawable(picture) {
 		// @Override
 		// public int getIntrinsicWidth() {
