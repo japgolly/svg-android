@@ -16,6 +16,7 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Stack;
+import java.util.regex.Pattern;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -167,6 +168,8 @@ public class SVGParser {
 		return new NumberParse(numbers, p);
 	}
 
+	private static final Pattern TRANSFORM_SEP = Pattern.compile("[\\s,]*");
+
 	/**
 	 * Parse a list of transforms such as: foo(n,n,n...) bar(n,n,n..._ ...) Delimiters are whitespaces or commas
 	 */
@@ -175,9 +178,9 @@ public class SVGParser {
 		while (true) {
 			parseTransformItem(s, matrix);
 			// Log.i(TAG, "Transformed: (" + s + ") " + matrix);
-			int rparen = s.indexOf(")");
+			final int rparen = s.indexOf(")");
 			if (rparen > 0 && s.length() > rparen + 1) {
-				s = s.substring(rparen + 1).replaceFirst("[\\s,]*", "");
+				s = TRANSFORM_SEP.matcher(s.substring(rparen + 1)).replaceFirst("");
 			} else {
 				break;
 			}
@@ -246,7 +249,7 @@ public class SVGParser {
 				matrix.preTranslate(cx, cy);
 			}
 		} else {
-			Log.i(TAG, "Invalid transform (" + s + ")");
+			Log.w(TAG, "Invalid transform (" + s + ")");
 		}
 		return matrix;
 	}
