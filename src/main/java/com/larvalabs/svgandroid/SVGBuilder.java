@@ -23,7 +23,7 @@ public class SVGBuilder {
 	private InputStream data;
 	private Integer searchColor = null;
 	private Integer replaceColor = null;
-	private ColorFilter colorFilter = null;
+	private ColorFilter strokeColorFilter = null, fillColorFilter = null;
 	private boolean whiteMode = false;
 	private boolean closeInputStream = true;
 
@@ -100,39 +100,59 @@ public class SVGBuilder {
 	 * Applies a {@link ColorFilter} to the paint objects used to render the SVG.
 	 */
 	public SVGBuilder setColorFilter(ColorFilter colorFilter) {
-		this.colorFilter = colorFilter;
+		this.strokeColorFilter = this.fillColorFilter = colorFilter;
 		return this;
 	}
 
 	/**
-	 * @param closeInputStream Whether or not to close the input stream after reading (ie. after calling
-	 *            {@link #build()}.
+	 * Applies a {@link ColorFilter} to strokes in the SVG.
 	 */
-	public SVGBuilder setCloseInputStream(boolean closeInputStream) {
+	public SVGBuilder setStrokeColorFilter(ColorFilter colorFilter) {
+		this.strokeColorFilter = colorFilter;
+		return this;
+	}
+
+	/**
+	 * Applies a {@link ColorFilter} to fills in the SVG.
+	 */
+	public SVGBuilder setFillColorFilter(ColorFilter colorFilter) {
+		this.fillColorFilter = colorFilter;
+		return this;
+	}
+
+	/**
+	 * Whether or not to close the input stream after reading (ie. after calling {@link #build()}.<br>
+	 * <em>(default is true)</em>
+	 */
+	public SVGBuilder setCloseInputStreamWhenDone(boolean closeInputStream) {
 		this.closeInputStream = closeInputStream;
 		return this;
 	}
 
 	/**
+	 * Loads, reads, parses the SVG.
+	 * 
 	 * @return the parsed SVG.
 	 * @throws SVGParseException if there is an error while parsing.
 	 */
 	public SVG build() throws SVGParseException {
-
 		if (data == null) {
 			throw new IllegalStateException("SVG input not specified. Call one of the readFrom...() methods first.");
 		}
 
 		try {
-			SVGHandler handler = new SVGHandler();
+			final SVGHandler handler = new SVGHandler();
 			handler.setColorSwap(searchColor, replaceColor);
 			handler.setWhiteMode(whiteMode);
-			if (colorFilter != null) {
-				handler.strokePaint.setColorFilter(colorFilter);
-				handler.fillPaint.setColorFilter(colorFilter);
+			if (strokeColorFilter != null) {
+				handler.strokePaint.setColorFilter(strokeColorFilter);
+			}
+			if (fillColorFilter != null) {
+				handler.fillPaint.setColorFilter(fillColorFilter);
 			}
 
-			return SVGParser.parse(new InputSource(data), handler);
+			final SVG svg = SVGParser.parse(new InputSource(data), handler);
+			return svg;
 
 		} finally {
 			if (closeInputStream) {
