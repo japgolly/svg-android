@@ -33,7 +33,7 @@ public class SVGBuilder {
 	 * @param svgData the input stream, with SVG XML data in UTF-8 character encoding.
 	 * @return the parsed SVG.
 	 */
-	public SVGBuilder getSVGFromInputStream(InputStream svgData) {
+	public SVGBuilder readFromInputStream(InputStream svgData) {
 		this.data = svgData;
 		return this;
 	}
@@ -43,7 +43,7 @@ public class SVGBuilder {
 	 * 
 	 * @param svgData the string containing SVG XML data.
 	 */
-	public SVGBuilder getSVGFromString(String svgData) {
+	public SVGBuilder readFromString(String svgData) {
 		this.data = new ByteArrayInputStream(svgData.getBytes());
 		return this;
 	}
@@ -54,7 +54,7 @@ public class SVGBuilder {
 	 * @param resources the Android context resources.
 	 * @param resId the ID of the raw resource SVG.
 	 */
-	public SVGBuilder getSVGFromResource(Resources resources, int resId) {
+	public SVGBuilder readFromResource(Resources resources, int resId) {
 		this.data = resources.openRawResource(resId);
 		return this;
 	}
@@ -66,27 +66,39 @@ public class SVGBuilder {
 	 * @param svgPath the path to the SVG file in the application's assets.
 	 * @throws IOException if there was a problem reading the file.
 	 */
-	public SVGBuilder getSVGFromAsset(AssetManager assetMngr, String svgPath) throws IOException {
+	public SVGBuilder readFromAsset(AssetManager assetMngr, String svgPath) throws IOException {
 		this.data = assetMngr.open(svgPath);
 		return this;
 	}
 
-	public SVGBuilder disableColorSwap() {
+	public SVGBuilder clearColorSwap() {
 		searchColor = replaceColor = null;
 		return this;
 	}
 
+	/**
+	 * Replaces a single colour with another.
+	 * 
+	 * @param searchColor The colour in the SVG.
+	 * @param replaceColor The desired colour.
+	 */
 	public SVGBuilder setColorSwap(int searchColor, int replaceColor) {
 		this.searchColor = searchColor;
 		this.replaceColor = replaceColor;
 		return this;
 	}
 
+	/**
+	 * In white-mode, fills are drawn in white and strokes are not drawn at all.
+	 */
 	public SVGBuilder setWhiteMode(boolean whiteMode) {
 		this.whiteMode = whiteMode;
 		return this;
 	}
 
+	/**
+	 * Applies a {@link ColorFilter} to the paint objects used to render the SVG.
+	 */
 	public SVGBuilder setColorFilter(ColorFilter colorFilter) {
 		this.colorFilter = colorFilter;
 		return this;
@@ -108,7 +120,7 @@ public class SVGBuilder {
 	public SVG build() throws SVGParseException {
 
 		if (data == null) {
-			throw new IllegalStateException("SVG input not specified. Call one of the getSVGFrom...() methods first.");
+			throw new IllegalStateException("SVG input not specified. Call one of the readFrom...() methods first.");
 		}
 
 		try {
