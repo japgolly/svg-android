@@ -86,6 +86,7 @@ public class SVGParser {
 			}
 			return result;
 		} catch (Exception e) {
+			Log.e(TAG, "Failed to parse SVG.", e);
 			throw new SVGParseException(e);
 		}
 	}
@@ -96,6 +97,7 @@ public class SVGParser {
 		int p = 0;
 		ArrayList<Float> numbers = new ArrayList<Float>();
 		boolean skipChar = false;
+		boolean prevWasE = false;
 		for (int i = 1; i < n; i++) {
 			if (skipChar) {
 				skipChar = false;
@@ -134,11 +136,17 @@ public class SVGParser {
 				p = i;
 				return new NumberParse(numbers, p);
 			}
+			case '-':
+				// Allow numbers with negative exp such as 7.23e-4
+				if (prevWasE) {
+					prevWasE = false;
+					break;
+				}
+				// fall-through
 			case '\n':
 			case '\t':
 			case ' ':
-			case ',':
-			case '-': {
+			case ',': {
 				String str = s.substring(p, i);
 				// Just keep moving if multiple whitespace
 				if (str.trim().length() > 0) {
@@ -154,10 +162,17 @@ public class SVGParser {
 				} else {
 					p++;
 				}
+				prevWasE = false;
 				break;
 			}
+			case 'e':
+				prevWasE = true;
+				break;
+			default:
+				prevWasE = false;
 			}
 		}
+
 		String last = s.substring(p);
 		if (last.length() > 0) {
 			// Util.debug("  Last: " + last);
