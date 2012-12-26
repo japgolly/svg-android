@@ -4,13 +4,12 @@ http://code.google.com/p/svg-android/
 Changes
 =======
 * Mavenised.
-* Added SVGBuilder to allow for SVG parsing & rendering options.
-* ColorFilters can now be applied. IMO this replaces the replace-single-colour
-  functionality.
-* Fixed SVGParser when running with Robolectric.
-* Handles viewBox SVG attribute.
-* Handles numbers with exponents.
+* Added SVGBuilder to allow easy specification of SVG parsing & rendering options.
+* ColorFilters can now be applied.
+* This library now works with Robolectric.
+* SVG viewBox attribute is now handled.
+* Numbers with exponents are handled.
 * Performance enhancements.
-* Many great fixes from
+* Has most community patches applied. Great work to
   [josefpavlik](https://github.com/josefpavlik/svg-android) and
   [mrn](https://github.com/mrn/svg-android)
