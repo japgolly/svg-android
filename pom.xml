@@ -2,14 +2,33 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>japgolly.oss</groupId>
+	<groupId>com.github.japgolly</groupId>
 	<artifactId>svg-android</artifactId>
-	<version>1.2-SNAPSHOT</version>
+	<version>2.0.0-SNAPSHOT</version>
+
+	<name>svg-android</name>
+	<description>Brings SVG parsing and drawing functionality to Android devices. Forked from the original project at http://code.google.com/p/svg-android/.</description>
+	<parent>
+		<groupId>org.sonatype.oss</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>7</version>
+	</parent>
+	<packaging>jar</packaging>
 
 	<url>https://github.com/japgolly/svg-android</url>
 	<scm>
-		<url>git://github.com/japgolly/svg-android.git</url>
+		<url>https://github.com/japgolly/svg-android</url>
+		<connection>scm:git:git://github.com/japgolly/svg-android.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/japgolly/svg-android.git</developerConnection>
 	</scm>
+
+	<licenses>
+		<license>
+			<name>The Apache Software License, Version 2.0</name>
+			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -25,33 +44,4 @@
 			<scope>provided</scope>
 		</dependency>
 	</dependencies>
-
-	<profiles>
-		<profile>
-			<id>nexus</id>
-			<activation>
-				<property>
-					<name>nexus.url</name>
-				</property>
-			</activation>
-			<distributionManagement>
-				<repository>
-					<id>nexus-releases</id>
-					<url>${nexus.url}/content/repositories/releases/</url>
-				</repository>
-				<snapshotRepository>
-					<id>nexus-snapshots</id>
-					<url>${nexus.url}/content/repositories/snapshots/</url>
-				</snapshotRepository>
-			</distributionManagement>
-		</profile>
-	</profiles>
-
-	<licenses>
-		<license>
-			<name>The Apache Software License, Version 2.0</name>
-			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-			<distribution>repo</distribution>
-		</license>
-	</licenses>
 </project>
