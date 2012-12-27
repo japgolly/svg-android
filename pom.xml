@@ -3,7 +3,7 @@
 
 	<groupId>com.github.japgolly</groupId>
 	<artifactId>svg-android</artifactId>
-	<version>2.0.0</version>
+	<version>2.0.1-SNAPSHOT</version>
 
 	<name>svg-android</name>
 	<description>Brings SVG parsing and drawing functionality to Android devices. Forked from the original project at http://code.google.com/p/svg-android/.</description>
