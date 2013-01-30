@@ -19,9 +19,9 @@ Maven
 Add this to your Android project's pom.xml:
 ```xml
 <dependency>
-  <groupId>com.github.japgolly</groupId>
+  <groupId>com.github.japgolly.android</groupId>
   <artifactId>svg-android</artifactId>
-	<version>2.0.0</version>
+	<version>2.0.1</version>
 </dependency>
 ```
 
