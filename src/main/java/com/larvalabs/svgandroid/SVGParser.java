@@ -1186,7 +1186,7 @@ public class SVGParser {
 				canvas = null;
 				String viewboxStr = getStringAttr("viewBox", atts);
 				if (viewboxStr != null) {
-					String[] dims = viewboxStr.split("\\s+");
+					String[] dims = viewboxStr.replace(',', ' ').split("\\s+");
 					if (dims.length == 4) {
 						Float x1 = parseFloatValue(dims[0], null);
 						Float y1 = parseFloatValue(dims[1], null);
