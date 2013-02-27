@@ -6,6 +6,7 @@ Changes
 * Mavenised.
 * Added SVGBuilder to allow easy specification of SVG parsing & rendering options.
 * ColorFilters can now be applied.
+* Layer opacity and hiding is now supported.
 * This library now works with Robolectric.
 * SVG viewBox attribute is now handled.
 * Numbers with exponents are handled.
