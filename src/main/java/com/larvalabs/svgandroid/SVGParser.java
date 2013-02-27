@@ -19,7 +19,6 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Stack;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
@@ -827,13 +826,13 @@ public class SVGParser {
 
 		Paint strokePaint;
 		boolean strokeSet = false;
-		Stack<Paint> strokePaintStack = new Stack<Paint>();
-		Stack<Boolean> strokeSetStack = new Stack<Boolean>();
+		Deque<Paint> strokePaintStack = new LinkedList<Paint>();
+		Deque<Boolean> strokeSetStack = new LinkedList<Boolean>();
 
 		Paint fillPaint;
 		boolean fillSet = false;
-		Stack<Paint> fillPaintStack = new Stack<Paint>();
-		Stack<Boolean> fillSetStack = new Stack<Boolean>();
+		Deque<Paint> fillPaintStack = new LinkedList<Paint>();
+		Deque<Boolean> fillSetStack = new LinkedList<Boolean>();
 
 		// Scratch rect (so we aren't constantly making new ones)
 		RectF rect = new RectF();
@@ -848,8 +847,8 @@ public class SVGParser {
 
 		Integer canvasRestoreCount;
 
-		Stack<Boolean> transformStack = new Stack<Boolean>();
-		Stack<Matrix> matrixStack = new Stack<Matrix>();
+		Deque<Boolean> transformStack = new LinkedList<Boolean>();
+		Deque<Matrix> matrixStack = new LinkedList<Matrix>();
 
 		HashMap<String, Gradient> gradientMap = new HashMap<String, Gradient>();
 		Gradient gradient = null;
