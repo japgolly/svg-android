@@ -16,7 +16,9 @@ import android.util.FloatMath;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Stack;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
@@ -607,6 +609,11 @@ public class SVGParser {
 		return parseFloatValue(v, defaultValue);
 	}
 
+	private static float getFloatAttr(String name, Attributes attributes, float defaultValue) {
+		String v = getStringAttr(name, attributes);
+		return parseFloatValue(v, defaultValue);
+	}
+
 	private static Float parseFloatValue(String str, Float defaultValue) {
 		if (str == null) {
 			return defaultValue;
@@ -771,26 +778,42 @@ public class SVGParser {
 					| (x & 0xF);
 		}
 
-		public Float getFloat(String name, float defaultValue) {
-			Float v = getFloat(name);
-			if (v == null) {
-				return defaultValue;
-			} else {
-				return v;
-			}
-		}
-
-		public Float getFloat(String name) {
+		public float getFloat(String name, float defaultValue) {
 			String v = getAttr(name);
 			if (v == null) {
-				return null;
+				return defaultValue;
 			} else {
 				try {
 					return Float.parseFloat(v);
 				} catch (NumberFormatException nfe) {
-					return null;
+					return defaultValue;
 				}
 			}
+		}
+
+		public Float getFloat(String name, Float defaultValue) {
+			String v = getAttr(name);
+			if (v == null) {
+				return defaultValue;
+			} else {
+				try {
+					return Float.parseFloat(v);
+				} catch (NumberFormatException nfe) {
+					return defaultValue;
+				}
+			}
+		}
+
+		public Float getFloat(String name) {
+			return getFloat(name, null);
+		}
+	}
+
+	private static class LayerAttributes {
+		public final float opacity;
+
+		public LayerAttributes(float opacity) {
+			this.opacity = opacity;
 		}
 	}
 
@@ -799,6 +822,8 @@ public class SVGParser {
 		private Picture picture;
 		private Canvas canvas;
 		private Float limitsAdjustmentX, limitsAdjustmentY;
+
+		final Deque<LayerAttributes> layerAttributeStack = new LinkedList<LayerAttributes>();
 
 		Paint strokePaint;
 		boolean strokeSet = false;
@@ -837,6 +862,8 @@ public class SVGParser {
 			fillPaint.setAntiAlias(true);
 			fillPaint.setStyle(Paint.Style.FILL);
 			matrixStack.push(new Matrix());
+
+			layerAttributeStack.addFirst(new LayerAttributes(1f));
 		}
 
 		void setPicture(Picture picture) {
@@ -1043,15 +1070,14 @@ public class SVGParser {
 			}
 			paint.setShader(null);
 			paint.setColor(c);
-			Float opacity = atts.getFloat("opacity");
-			if (opacity == null) {
-				opacity = atts.getFloat(fillMode ? "fill-opacity" : "stroke-opacity");
+			Float opacityAttr = atts.getFloat("opacity");
+			if (opacityAttr == null) {
+				opacityAttr = atts.getFloat(fillMode ? "fill-opacity" : "stroke-opacity");
 			}
-			if (opacity == null) {
-				paint.setAlpha(255);
-			} else {
-				paint.setAlpha((int) (255 * opacity));
-			}
+
+			float opacity = opacityAttr != null ? opacityAttr : 1f;
+			opacity *= currentLayerAttributes().opacity;
+			paint.setAlpha((int) (255f * opacity));
 		}
 
 		/**
@@ -1223,7 +1249,7 @@ public class SVGParser {
 					Properties props = new Properties(atts);
 					float offset = props.getFloat("offset", 0);
 					int color = props.getColor("stop-color");
-					float alpha = props.getFloat("stop-opacity", 1);
+					float alpha = props.getFloat("stop-opacity", 1) * currentLayerAttributes().opacity;
 					int alphaInt = Math.round(255 * alpha);
 					color |= (alphaInt << 24);
 					gradient.positions.add(offset);
@@ -1248,6 +1274,12 @@ public class SVGParser {
 						// Util.debug("Hidden up: " + hiddenLevel);
 					}
 				}
+
+				// Create layer attributes
+				final float opacity = props.getFloat("opacity", 1f);
+				LayerAttributes curLayerAttr = currentLayerAttributes();
+				LayerAttributes newLayerAttr = new LayerAttributes(curLayerAttr.opacity * opacity);
+				layerAttributeStack.addLast(newLayerAttr);
 
 				pushTransform(atts);
 				fillPaintStack.push(new Paint(fillPaint));
@@ -1384,6 +1416,10 @@ public class SVGParser {
 			}
 		}
 
+		public LayerAttributes currentLayerAttributes() {
+			return layerAttributeStack.peekLast();
+		}
+
 		@Override
 		public void characters(char ch[], int start, int length) {
 			// no-op
@@ -1455,6 +1491,7 @@ public class SVGParser {
 				fillSet = fillSetStack.pop();
 				strokePaint = strokePaintStack.pop();
 				strokeSet = strokeSetStack.pop();
+				layerAttributeStack.pollLast();
 			}
 		}
 	}
