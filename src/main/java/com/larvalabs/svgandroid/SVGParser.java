@@ -16,7 +16,6 @@ import android.util.FloatMath;
 import android.util.Log;
 
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
@@ -822,22 +821,22 @@ public class SVGParser {
 		private Canvas canvas;
 		private Float limitsAdjustmentX, limitsAdjustmentY;
 
-		final Deque<LayerAttributes> layerAttributeStack = new LinkedList<LayerAttributes>();
+		final LinkedList<LayerAttributes> layerAttributeStack = new LinkedList<LayerAttributes>();
 
 		Paint strokePaint;
 		boolean strokeSet = false;
-		Deque<Paint> strokePaintStack = new LinkedList<Paint>();
-		Deque<Boolean> strokeSetStack = new LinkedList<Boolean>();
+		final LinkedList<Paint> strokePaintStack = new LinkedList<Paint>();
+		final LinkedList<Boolean> strokeSetStack = new LinkedList<Boolean>();
 
 		Paint fillPaint;
 		boolean fillSet = false;
-		Deque<Paint> fillPaintStack = new LinkedList<Paint>();
-		Deque<Boolean> fillSetStack = new LinkedList<Boolean>();
+		final LinkedList<Paint> fillPaintStack = new LinkedList<Paint>();
+		final LinkedList<Boolean> fillSetStack = new LinkedList<Boolean>();
 
 		// Scratch rect (so we aren't constantly making new ones)
-		RectF rect = new RectF();
+		final RectF rect = new RectF();
 		RectF bounds = null;
-		RectF limits = new RectF(
+		final RectF limits = new RectF(
 				Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY, Float.NEGATIVE_INFINITY, Float.NEGATIVE_INFINITY);
 
 		Integer searchColor = null;
@@ -847,10 +846,10 @@ public class SVGParser {
 
 		Integer canvasRestoreCount;
 
-		Deque<Boolean> transformStack = new LinkedList<Boolean>();
-		Deque<Matrix> matrixStack = new LinkedList<Matrix>();
+		final LinkedList<Boolean> transformStack = new LinkedList<Boolean>();
+		final LinkedList<Matrix> matrixStack = new LinkedList<Matrix>();
 
-		HashMap<String, Gradient> gradientMap = new HashMap<String, Gradient>();
+		final HashMap<String, Gradient> gradientMap = new HashMap<String, Gradient>();
 		Gradient gradient = null;
 
 		public SVGHandler() {
@@ -860,8 +859,7 @@ public class SVGParser {
 			fillPaint = new Paint();
 			fillPaint.setAntiAlias(true);
 			fillPaint.setStyle(Paint.Style.FILL);
-			matrixStack.push(new Matrix());
-
+			matrixStack.addFirst(new Matrix());
 			layerAttributeStack.addFirst(new LayerAttributes(1f));
 		}
 
@@ -1152,7 +1150,7 @@ public class SVGParser {
 		private final RectF tmpLimitRect = new RectF();
 
 		private void doLimits(RectF box, Paint paint) {
-			Matrix m = matrixStack.peek();
+			Matrix m = matrixStack.getLast();
 			m.mapRect(tmpLimitRect, box);
 			float width2 = (paint == null) ? 0 : paint.getStrokeWidth() / 2;
 			doLimits2(tmpLimitRect.left - width2, tmpLimitRect.top - width2);
@@ -1166,21 +1164,21 @@ public class SVGParser {
 		private void pushTransform(Attributes atts) {
 			final String transform = getStringAttr("transform", atts);
 			boolean pushed = transform != null;
-			transformStack.push(pushed);
+			transformStack.addLast(pushed);
 			if (pushed) {
 				final Matrix matrix = parseTransform(transform);
 				canvas.save();
 				canvas.concat(matrix);
-				matrix.postConcat(matrixStack.peek());
-				matrixStack.push(matrix);
+				matrix.postConcat(matrixStack.getLast());
+				matrixStack.addLast(matrix);
 			}
 
 		}
 
 		private void popTransform() {
-			if (transformStack.pop()) {
+			if (transformStack.removeLast()) {
 				canvas.restore();
-				matrixStack.pop();
+				matrixStack.removeLast();
 			}
 		}
 
@@ -1281,10 +1279,10 @@ public class SVGParser {
 				layerAttributeStack.addLast(newLayerAttr);
 
 				pushTransform(atts);
-				fillPaintStack.push(new Paint(fillPaint));
-				strokePaintStack.push(new Paint(strokePaint));
-				fillSetStack.push(fillSet);
-				strokeSetStack.push(strokeSet);
+				fillPaintStack.addLast(new Paint(fillPaint));
+				strokePaintStack.addLast(new Paint(strokePaint));
+				fillSetStack.addLast(fillSet);
+				strokeSetStack.addLast(strokeSet);
 
 				doFill(props, null); // Added by mrn but a boundingBox is now required by josef.
 				doStroke(props);
@@ -1416,7 +1414,7 @@ public class SVGParser {
 		}
 
 		public LayerAttributes currentLayerAttributes() {
-			return layerAttributeStack.peekLast();
+			return layerAttributeStack.getLast();
 		}
 
 		@Override
@@ -1486,11 +1484,13 @@ public class SVGParser {
 				// // Clear gradient map
 				// gradientRefMap.clear();
 				popTransform();
-				fillPaint = fillPaintStack.pop();
-				fillSet = fillSetStack.pop();
-				strokePaint = strokePaintStack.pop();
-				strokeSet = strokeSetStack.pop();
-				layerAttributeStack.pollLast();
+				fillPaint = fillPaintStack.removeLast();
+				fillSet = fillSetStack.removeLast();
+				strokePaint = strokePaintStack.removeLast();
+				strokeSet = strokeSetStack.removeLast();
+				if (!layerAttributeStack.isEmpty()) {
+					layerAttributeStack.removeLast();
+				}
 			}
 		}
 	}
