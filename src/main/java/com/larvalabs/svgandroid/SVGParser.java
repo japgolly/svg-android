@@ -1243,14 +1243,21 @@ public class SVGParser {
 				gradient = doGradient(false, atts);
 			} else if (localName.equals("stop")) {
 				if (gradient != null) {
-					Properties props = new Properties(atts);
+					final Properties props = new Properties(atts);
+
+					final int colour;
+					final Integer stopColour = props.getColor("stop-color");
+					if (stopColour == null) {
+						colour = 0;
+					} else {
+						float alpha = props.getFloat("stop-opacity", 1) * currentLayerAttributes().opacity;
+						int alphaInt = Math.round(255 * alpha);
+						colour = stopColour.intValue() | (alphaInt << 24);
+					}
+					gradient.colors.add(colour);
+
 					float offset = props.getFloat("offset", 0);
-					int color = props.getColor("stop-color");
-					float alpha = props.getFloat("stop-opacity", 1) * currentLayerAttributes().opacity;
-					int alphaInt = Math.round(255 * alpha);
-					color |= (alphaInt << 24);
 					gradient.positions.add(offset);
-					gradient.colors.add(color);
 				}
 			} else if (localName.equals("g")) {
 				final Properties props = new Properties(atts);
