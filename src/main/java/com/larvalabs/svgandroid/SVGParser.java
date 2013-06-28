@@ -872,7 +872,9 @@ public class SVGParser {
 		public void setColorSwap(Integer searchColor, Integer replaceColor) {
 			this.searchColor = searchColor;
 			this.replaceColor = replaceColor;
-            this.replaceOpacity = (replaceColor >> 24) & 0x000000FF;
+			if (replaceColor != null) {
+				this.replaceOpacity = (replaceColor >> 24) & 0x000000FF;
+			}
 		}
 
         public void setOverideOpacity(boolean overideOpacity){
