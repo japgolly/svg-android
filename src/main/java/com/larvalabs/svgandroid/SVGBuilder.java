@@ -97,7 +97,9 @@ public class SVGBuilder {
      *
      * @param overideOpacity true to activate this mode
      */
-    public SVGBuilder setOverideOpacity(boolean overideOpacity){
+    public SVGBuilder setColorSwap(int searchColor, int replaceColor, boolean overideOpacity){
+        this.searchColor = searchColor;
+        this.replaceColor = replaceColor;
         this.overideOpacity = overideOpacity;
         return this;
     }
@@ -156,8 +158,7 @@ public class SVGBuilder {
 
 		try {
 			final SVGHandler handler = new SVGHandler();
-            handler.setOverideOpacity(overideOpacity);
-			handler.setColorSwap(searchColor, replaceColor);
+			handler.setColorSwap(searchColor, replaceColor, overideOpacity);
 			handler.setWhiteMode(whiteMode);
 			if (strokeColorFilter != null) {
 				handler.strokePaint.setColorFilter(strokeColorFilter);

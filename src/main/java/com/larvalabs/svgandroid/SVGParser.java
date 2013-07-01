@@ -844,7 +844,6 @@ public class SVGParser {
         Integer replaceOpacity = null;
 
 		boolean whiteMode = false;
-        boolean overideOpacity = false;
 
 		Integer canvasRestoreCount;
 
@@ -869,16 +868,12 @@ public class SVGParser {
 			this.picture = picture;
 		}
 
-		public void setColorSwap(Integer searchColor, Integer replaceColor) {
-			this.searchColor = searchColor;
-			this.replaceColor = replaceColor;
-			if (replaceColor != null) {
-				this.replaceOpacity = (replaceColor >> 24) & 0x000000FF;
-			}
-		}
-
-        public void setOverideOpacity(boolean overideOpacity){
-            this.overideOpacity = overideOpacity;
+		public void setColorSwap(Integer searchColor, Integer replaceColor, boolean overideOpacity) {
+            this.searchColor = searchColor;
+            this.replaceColor = replaceColor;
+            if (replaceColor != null && overideOpacity) {
+                this.replaceOpacity = (replaceColor >> 24) & 0x000000FF;
+            }
         }
 
 		public void setWhiteMode(boolean whiteMode) {
@@ -1083,7 +1078,7 @@ public class SVGParser {
 
 			float opacity = opacityAttr != null ? opacityAttr : 1f;
 			opacity *= currentLayerAttributes().opacity;
-			if (overideOpacity == true && replaceOpacity != null && replaceOpacity != 0x1F){
+			if (replaceOpacity != null){
                 paint.setAlpha((int) ((255f * opacity * replaceOpacity) / 255f));
             } else {
             paint.setAlpha((int) (255f * opacity));
