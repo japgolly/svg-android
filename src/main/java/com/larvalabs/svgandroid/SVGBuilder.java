@@ -25,6 +25,7 @@ public class SVGBuilder {
 	private Integer replaceColor = null;
 	private ColorFilter strokeColorFilter = null, fillColorFilter = null;
 	private boolean whiteMode = false;
+    private boolean overideOpacity = false;
 	private boolean closeInputStream = true;
 
 	/**
@@ -88,6 +89,21 @@ public class SVGBuilder {
 		return this;
 	}
 
+
+    /**
+     *  Combine the opacity defined in the SVG
+     *  resource with the alpha of the color
+     *  specified in setColorSwap
+     *
+     * @param overideOpacity true to activate this mode
+     */
+    public SVGBuilder setColorSwap(int searchColor, int replaceColor, boolean overideOpacity){
+        this.searchColor = searchColor;
+        this.replaceColor = replaceColor;
+        this.overideOpacity = overideOpacity;
+        return this;
+    }
+
 	/**
 	 * In white-mode, fills are drawn in white and strokes are not drawn at all.
 	 */
@@ -142,7 +158,7 @@ public class SVGBuilder {
 
 		try {
 			final SVGHandler handler = new SVGHandler();
-			handler.setColorSwap(searchColor, replaceColor);
+			handler.setColorSwap(searchColor, replaceColor, overideOpacity);
 			handler.setWhiteMode(whiteMode);
 			if (strokeColorFilter != null) {
 				handler.strokePaint.setColorFilter(strokeColorFilter);
