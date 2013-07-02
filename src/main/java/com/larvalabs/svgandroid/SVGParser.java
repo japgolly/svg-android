@@ -841,7 +841,7 @@ public class SVGParser {
 
 		Integer searchColor = null;
 		Integer replaceColor = null;
-        Integer replaceOpacity = null;
+		Float opacityMultiplier = null;
 
 		boolean whiteMode = false;
 
@@ -869,12 +869,14 @@ public class SVGParser {
 		}
 
 		public void setColorSwap(Integer searchColor, Integer replaceColor, boolean overideOpacity) {
-            this.searchColor = searchColor;
-            this.replaceColor = replaceColor;
-            if (replaceColor != null && overideOpacity) {
-                this.replaceOpacity = (replaceColor >> 24) & 0x000000FF;
-            }
-        }
+			this.searchColor = searchColor;
+			this.replaceColor = replaceColor;
+			if (replaceColor != null && overideOpacity) {
+				opacityMultiplier = ((replaceColor >> 24) & 0x000000FF) / 255f;
+			} else {
+				opacityMultiplier = null;
+			}
+		}
 
 		public void setWhiteMode(boolean whiteMode) {
 			this.whiteMode = whiteMode;
@@ -1078,11 +1080,10 @@ public class SVGParser {
 
 			float opacity = opacityAttr != null ? opacityAttr : 1f;
 			opacity *= currentLayerAttributes().opacity;
-			if (replaceOpacity != null){
-                paint.setAlpha((int) ((255f * opacity * replaceOpacity) / 255f));
-            } else {
-            paint.setAlpha((int) (255f * opacity));
-            }
+			if (opacityMultiplier != null) {
+				opacity *= opacityMultiplier;
+			}
+			paint.setAlpha((int) (255f * opacity));
 		}
 
 		/**
