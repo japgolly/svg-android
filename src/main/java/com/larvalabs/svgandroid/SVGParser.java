@@ -746,7 +746,7 @@ public class SVGParser {
 		}
 
 		public Integer getColor(String name) {
-			String v = getAttr(name);
+            String v = name;
 			if (v == null) {
 				return null;
 			} else if (v.startsWith("#")) {
@@ -904,6 +904,9 @@ public class SVGParser {
 				return true;
 			}
 			String fillString = atts.getString("fill");
+            if (fillString == null && SVG_FILL != null) {
+                fillString = SVG_FILL;
+            }
 			if (fillString != null) {
 				if (fillString.startsWith("url(#")) {
 
@@ -937,7 +940,7 @@ public class SVGParser {
 					return true;
 				} else {
 					fillPaint.setShader(null);
-					Integer color = atts.getColor("fill");
+                    Integer color = atts.getColor(fillString);
 					if (color != null) {
 						doColor(atts, color, true, fillPaint);
 						return true;
@@ -1001,7 +1004,7 @@ public class SVGParser {
 					strokePaint.setColor(Color.TRANSPARENT);
 					return false;
 				} else {
-					Integer color = atts.getColor("stroke");
+                    Integer color = atts.getColor(strokeString);
 					if (color != null) {
 						doColor(atts, color, false, strokePaint);
 						return true;
@@ -1191,6 +1194,8 @@ public class SVGParser {
 			}
 		}
 
+        private String SVG_FILL = null;
+
 		@Override
 		public void startElement(String namespaceURI, String localName, String qName, Attributes atts)
 				throws SAXException {
@@ -1216,6 +1221,7 @@ public class SVGParser {
 			}
 			if (localName.equals("svg")) {
 				canvas = null;
+                SVG_FILL = getStringAttr("fill", atts);
 				String viewboxStr = getStringAttr("viewBox", atts);
 				if (viewboxStr != null) {
 					String[] dims = viewboxStr.replace(',', ' ').split("\\s+");
@@ -1255,7 +1261,7 @@ public class SVGParser {
 					final Properties props = new Properties(atts);
 
 					final int colour;
-					final Integer stopColour = props.getColor("stop-color");
+                    final Integer stopColour = props.getColor(props.getAttr("stop-color"));
 					if (stopColour == null) {
 						colour = 0;
 					} else {
