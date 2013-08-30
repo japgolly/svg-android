@@ -5,9 +5,11 @@ import android.content.res.Resources;
 import android.graphics.ColorFilter;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.zip.GZIPInputStream;
 
 import org.xml.sax.InputSource;
 
@@ -143,7 +145,7 @@ public class SVGBuilder {
 	}
 
 	/**
-	 * Loads, reads, parses the SVG.
+	 * Loads, reads, parses the SVG (or SVGZ).
 	 * 
 	 * @return the parsed SVG.
 	 * @throws SVGParseException if there is an error while parsing.
@@ -162,6 +164,24 @@ public class SVGBuilder {
 			}
 			if (fillColorFilter != null) {
 				handler.fillPaint.setColorFilter(fillColorFilter);
+			}
+
+			// SVGZ support (based on https://github.com/josefpavlik/svg-android/commit/fc0522b2e1):
+			if(!data.markSupported())
+				data = new BufferedInputStream(data); // decorate stream so we can use mark/reset
+			try {
+				data.mark(4);
+				byte[] magic = new byte[2];
+				int r = data.read(magic, 0, 2);
+				int magicInt = (magic[0] + ((magic[1]) << 8)) & 0xffff;
+				data.reset();
+				if (r == 2 && magicInt == GZIPInputStream.GZIP_MAGIC) {
+					// Log.d(SVGParser.TAG, "SVG is gzipped");
+					GZIPInputStream gin = new GZIPInputStream(data);
+					data = gin;
+				}
+			} catch (IOException ioe) {
+				throw new SVGParseException(ioe);
 			}
 
 			final SVG svg = SVGParser.parse(new InputSource(data), handler);
