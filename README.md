@@ -10,6 +10,7 @@ Changes
 * This library now works with Robolectric.
 * SVG viewBox attribute is now handled.
 * Numbers with exponents are handled.
+* SVGZ (gzipped svg) auto-detected and supported. (Thank @josefpavlik & @mstevens83)
 * Performance enhancements.
 * Has most community patches applied. Great work to
   [josefpavlik](https://github.com/josefpavlik/svg-android) and
@@ -22,7 +23,7 @@ Add this to your Android project's pom.xml:
 <dependency>
   <groupId>com.github.japgolly.android</groupId>
   <artifactId>svg-android</artifactId>
-	<version>2.0.4</version>
+	<version>2.0.5</version>
 </dependency>
 ```
 
