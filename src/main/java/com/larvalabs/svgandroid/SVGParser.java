@@ -1225,8 +1225,8 @@ public class SVGParser {
 						Float x2 = parseFloatValue(dims[2], null);
 						Float y2 = parseFloatValue(dims[3], null);
 						if (x1 != null && x2 != null && y1 != null && y2 != null) {
-                            x2 += x1;
-                            y2 += y1;
+							x2 += x1;
+							y2 += y1;
 
 							float width = FloatMath.ceil(x2 - x1);
 							float height = FloatMath.ceil(y2 - y1);
