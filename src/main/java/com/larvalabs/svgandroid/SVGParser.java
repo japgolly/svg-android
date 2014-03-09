@@ -750,10 +750,9 @@ public class SVGParser {
 			if (v == null) {
 				return null;
 			} else if (v.startsWith("#")) {
-				try {
-					int c = Integer.parseInt(v.substring(1), 16);
-					return v.length() == 4 ? hex3Tohex6(c) : c;
-				} catch (NumberFormatException nfe) {
+				try { // #RRGGBB or #AARRGGBB
+					return Color.parseColor(v);
+				} catch (IllegalArgumentException iae) {
 					return null;
 				}
 			} else if (v.startsWith("rgb(") && v.endsWith(")")) {
@@ -833,6 +832,14 @@ public class SVGParser {
 		final LinkedList<Paint> fillPaintStack = new LinkedList<Paint>();
 		final LinkedList<Boolean> fillSetStack = new LinkedList<Boolean>();
 
+		Paint textPaint;
+		boolean drawCharacters;
+		Float textX;
+		Float textY;
+		int newLineCount;
+		Float textSize;
+		Matrix font_matrix;
+
 		// Scratch rect (so we aren't constantly making new ones)
 		final RectF rect = new RectF();
 		RectF bounds = null;
@@ -860,6 +867,8 @@ public class SVGParser {
 			fillPaint = new Paint();
 			fillPaint.setAntiAlias(true);
 			fillPaint.setStyle(Paint.Style.FILL);
+			textPaint = new Paint();
+			textPaint.setAntiAlias(true);
 			matrixStack.addFirst(new Matrix());
 			layerAttributeStack.addFirst(new LayerAttributes(1f));
 		}
@@ -1202,6 +1211,10 @@ public class SVGParser {
 			// Reset paint opacity
 			strokePaint.setAlpha(255);
 			fillPaint.setAlpha(255);
+			textPaint.setAlpha(255);
+
+			this.drawCharacters = false;
+
 			// Ignore everything but rectangles in bounds mode
 			if (boundsMode) {
 				if (localName.equals("rect")) {
@@ -1363,6 +1376,34 @@ public class SVGParser {
 					doLimits(rect, strokePaint);
 					popTransform();
 				}
+			} else if (!hidden && localName.equals("text")) {
+				Float textX = getFloatAttr("x", atts);
+				Float textY = getFloatAttr("y", atts);
+				Float fontSize = getFloatAttr("font-size", atts);
+				Matrix font_matrix = parseTransform(getStringAttr("transform",
+						atts));
+				drawCharacters = true;
+				if (fontSize != null) {
+					textSize = fontSize;
+					pushTransform(atts);
+					if (textX != null && textY != null) {
+						this.textX = textX;
+						this.textY = textY;
+					} else if (font_matrix != null) {
+						this.font_matrix = font_matrix;
+					}
+					Properties props = new Properties(atts);
+					Integer color = props.getColor("fill");
+					if (color != null) {
+						doColor(props, color, true, textPaint);
+					} else {
+						textPaint.setColor(Color.BLACK);
+					}
+					this.newLineCount = 0;
+					textPaint.setTextSize(textSize);
+					canvas.save();
+					popTransform();
+				}
 			} else if (!hidden && (localName.equals("circle") || localName.equals("ellipse"))) {
 				Float centerX, centerY, radiusX, radiusY;
 
@@ -1444,7 +1485,26 @@ public class SVGParser {
 
 		@Override
 		public void characters(char ch[], int start, int length) {
-			// no-op
+			if (this.drawCharacters) {
+				if (length == 1 && ch[0] == '\n') {
+					canvas.restore();
+					canvas.save();
+
+					newLineCount += 1;
+					canvas.translate(0, newLineCount * textSize);
+				} else {
+					String text = new String(ch, start, length);
+					if (this.textX != null && this.textY != null) {
+						canvas.drawText(text, this.textX, this.textY, textPaint);
+					} else {
+						canvas.setMatrix(font_matrix);
+						canvas.drawText(text, 0, 0, textPaint);
+					}
+					Float delta = textPaint.measureText(text);
+
+					canvas.translate(delta, 0);
+				}
+			}
 		}
 
 		@Override
@@ -1515,6 +1575,11 @@ public class SVGParser {
 				strokeSet = strokeSetStack.removeLast();
 				if (!layerAttributeStack.isEmpty()) {
 					layerAttributeStack.removeLast();
+				}
+			} else if (localName.equals("text")) {
+				if (this.drawCharacters) {
+					this.drawCharacters = false;
+					canvas.restore();
 				}
 			}
 		}
