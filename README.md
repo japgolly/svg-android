@@ -23,7 +23,7 @@ Add this to your Android project's pom.xml:
 <dependency>
   <groupId>com.github.japgolly.android</groupId>
   <artifactId>svg-android</artifactId>
-	<version>2.0.5</version>
+	<version>2.0.6</version>
 </dependency>
 ```
 
