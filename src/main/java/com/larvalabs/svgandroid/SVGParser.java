@@ -1392,8 +1392,8 @@ public class SVGParser {
 					}
 					this.newLineCount = 0;
 					textPaint.setTextSize(textSize);
-					canvas.save();
 					popTransform();
+					canvas.save();
 				}
 			} else if (!hidden && (localName.equals("circle") || localName.equals("ellipse"))) {
 				Float centerX, centerY, radiusX, radiusY;
@@ -1478,9 +1478,6 @@ public class SVGParser {
 		public void characters(char ch[], int start, int length) {
 			if (this.drawCharacters) {
 				if (length == 1 && ch[0] == '\n') {
-					canvas.restore();
-					canvas.save();
-
 					newLineCount += 1;
 					canvas.translate(0, newLineCount * textSize);
 				} else {
@@ -1488,12 +1485,9 @@ public class SVGParser {
 					if (this.textX != null && this.textY != null) {
 						canvas.drawText(text, this.textX, this.textY, textPaint);
 					} else {
-						canvas.setMatrix(font_matrix);
+						canvas.concat(font_matrix);
 						canvas.drawText(text, 0, 0, textPaint);
 					}
-					Float delta = textPaint.measureText(text);
-
-					canvas.translate(delta, 0);
 				}
 			}
 		}
