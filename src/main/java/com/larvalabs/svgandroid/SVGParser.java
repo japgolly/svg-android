@@ -657,6 +657,7 @@ public class SVGParser {
 		public boolean boundingBox = false;
 		public TileMode tilemode;
 
+/*
 		public Gradient createChild(Gradient g) {
 			Gradient child = new Gradient();
 			child.id = g.id;
@@ -686,6 +687,20 @@ public class SVGParser {
 			child.tilemode = g.tilemode;
 			return child;
 		}
+*/
+        public void inherit(Gradient parent) {
+            Gradient child = this;
+            child.xlink = parent.id;
+            child.positions = parent.positions;
+            child.colors = parent.colors;
+            if (child.matrix == null) {
+                child.matrix = parent.matrix;
+            } else if (parent.matrix != null) {
+            	Matrix m = new Matrix(parent.matrix);
+                m.preConcat(child.matrix);
+                child.matrix = m;
+            }
+        }
 	}
 
 	private static class StyleSet {
@@ -746,7 +761,7 @@ public class SVGParser {
 		}
 
 		public Integer getColor(String name) {
-			String v = getAttr(name);
+            String v = name;
 			if (v == null) {
 				return null;
 			} else if (v.startsWith("#")) {
@@ -913,6 +928,9 @@ public class SVGParser {
 				return true;
 			}
 			String fillString = atts.getString("fill");
+            if (fillString == null && SVG_FILL != null) {
+                fillString = SVG_FILL;
+            }
 			if (fillString != null) {
 				if (fillString.startsWith("url(#")) {
 
@@ -946,7 +964,7 @@ public class SVGParser {
 					return true;
 				} else {
 					fillPaint.setShader(null);
-					Integer color = atts.getColor("fill");
+                    Integer color = atts.getColor(fillString);
 					if (color != null) {
 						doColor(atts, color, true, fillPaint);
 						return true;
@@ -1010,7 +1028,7 @@ public class SVGParser {
 					strokePaint.setColor(Color.TRANSPARENT);
 					return false;
 				} else {
-					Integer color = atts.getColor("stroke");
+                    Integer color = atts.getColor(strokeString);
 					if (color != null) {
 						doColor(atts, color, false, strokePaint);
 						return true;
@@ -1075,7 +1093,34 @@ public class SVGParser {
 			return gradient;
 		}
 
-		private void doColor(Properties atts, Integer color, boolean fillMode, Paint paint) {
+        private void finishGradients() {
+        	for(Gradient gradient : gradientMap.values()) {
+                if (gradient.xlink != null) {
+                    Gradient parent = gradientMap.get(gradient.xlink);
+                    if (parent != null) {
+                        gradient.inherit(parent);
+                    }
+                }
+                int[] colors = new int[gradient.colors.size()];
+                for (int i = 0; i < colors.length; i++) {
+                    colors[i] = gradient.colors.get(i);
+                }
+                float[] positions = new float[gradient.positions.size()];
+                for (int i = 0; i < positions.length; i++) {
+                    positions[i] = gradient.positions.get(i);
+                }
+                if (colors.length == 0) {
+               		Log.d("BAD", "BAD gradient, id="+gradient.id);
+                }
+                if (gradient.isLinear) {
+                	gradient.shader= new LinearGradient(gradient.x1, gradient.y1, gradient.x2, gradient.y2, colors, positions, gradient.tilemode);
+                } else {
+                	gradient.shader= new RadialGradient(gradient.x, gradient.y, gradient.radius, colors, positions, gradient.tilemode);
+                }
+        	}
+        }
+
+        private void doColor(Properties atts, Integer color, boolean fillMode, Paint paint) {
 			int c = (0xFFFFFF & color) | 0xFF000000;
 			if (searchColor != null && searchColor.intValue() == c) {
 				c = replaceColor;
@@ -1200,6 +1245,8 @@ public class SVGParser {
 			}
 		}
 
+        private String SVG_FILL = null;
+
 		@Override
 		public void startElement(String namespaceURI, String localName, String qName, Attributes atts)
 				throws SAXException {
@@ -1229,6 +1276,7 @@ public class SVGParser {
 			}
 			if (localName.equals("svg")) {
 				canvas = null;
+                SVG_FILL = getStringAttr("fill", atts);
 				String viewboxStr = getStringAttr("viewBox", atts);
 				if (viewboxStr != null) {
 					String[] dims = viewboxStr.replace(',', ' ').split("\\s+");
@@ -1238,6 +1286,9 @@ public class SVGParser {
 						Float x2 = parseFloatValue(dims[2], null);
 						Float y2 = parseFloatValue(dims[3], null);
 						if (x1 != null && x2 != null && y1 != null && y2 != null) {
+							x2 += x1;
+							y2 += y1;
+
 							float width = FloatMath.ceil(x2 - x1);
 							float height = FloatMath.ceil(y2 - y1);
 							canvas = picture.beginRecording((int) width, (int) height);
@@ -1268,7 +1319,7 @@ public class SVGParser {
 					final Properties props = new Properties(atts);
 
 					final int colour;
-					final Integer stopColour = props.getColor("stop-color");
+                    final Integer stopColour = props.getColor(props.getAttr("stop-color"));
 					if (stopColour == null) {
 						colour = 0;
 					} else {
@@ -1510,35 +1561,10 @@ public class SVGParser {
 
 			} else if (localName.equals("linearGradient") || localName.equals("radialGradient")) {
 				if (gradient.id != null) {
-					if (gradient.xlink != null) {
-						Gradient parent = gradientMap.get(gradient.xlink);
-						if (parent != null) {
-							gradient = parent.createChild(gradient);
-						}
-					}
-					int[] colors = new int[gradient.colors.size()];
-					for (int i = 0; i < colors.length; i++) {
-						colors[i] = gradient.colors.get(i);
-					}
-					float[] positions = new float[gradient.positions.size()];
-					for (int i = 0; i < positions.length; i++) {
-						positions[i] = gradient.positions.get(i);
-					}
-					if (colors.length == 0) {
-						Log.d("BAD", "BAD");
-					}
-					if (localName.equals("linearGradient")) {
-						gradient.shader =
-								new LinearGradient(
-										gradient.x1, gradient.y1, gradient.x2, gradient.y2, colors, positions,
-										gradient.tilemode);
-					} else {
-						gradient.shader =
-								new RadialGradient(
-										gradient.x, gradient.y, gradient.radius, colors, positions, gradient.tilemode);
-					}
 					gradientMap.put(gradient.id, gradient);
 				}
+			} else if (localName.equals("defs")) {
+				finishGradients();
 			} else if (localName.equals("g")) {
 				if (boundsMode) {
 					boundsMode = false;
