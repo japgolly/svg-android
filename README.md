@@ -1,3 +1,8 @@
+# Status: Unmaintained. Discontinued.
+This project is no longer being developed or maintained.
+
+### _
+
 This is forked from the awesome but unmaintained:
 http://code.google.com/p/svg-android/
 
