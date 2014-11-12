@@ -849,6 +849,8 @@ public class SVGParser {
 
 		Paint textPaint;
 		boolean drawCharacters;
+		// See http://stackoverflow.com/questions/4567636/java-sax-parser-split-calls-to-characters
+		StringBuilder textBuilder;
 		Float textX;
 		Float textY;
 		int newLineCount;
@@ -1443,8 +1445,9 @@ public class SVGParser {
 					}
 					this.newLineCount = 0;
 					textPaint.setTextSize(textSize);
-					canvas.save();
 					popTransform();
+					canvas.save();
+					textBuilder = new StringBuilder();
 				}
 			} else if (!hidden && (localName.equals("circle") || localName.equals("ellipse"))) {
 				Float centerX, centerY, radiusX, radiusY;
@@ -1528,24 +1531,9 @@ public class SVGParser {
 		@Override
 		public void characters(char ch[], int start, int length) {
 			if (this.drawCharacters) {
-				if (length == 1 && ch[0] == '\n') {
-					canvas.restore();
-					canvas.save();
-
-					newLineCount += 1;
-					canvas.translate(0, newLineCount * textSize);
-				} else {
-					String text = new String(ch, start, length);
-					if (this.textX != null && this.textY != null) {
-						canvas.drawText(text, this.textX, this.textY, textPaint);
-					} else {
-						canvas.setMatrix(font_matrix);
-						canvas.drawText(text, 0, 0, textPaint);
-					}
-					Float delta = textPaint.measureText(text);
-
-					canvas.translate(delta, 0);
-				}
+				String text = new String(ch, start, length);
+				textBuilder.append(text);
+				return;
 			}
 		}
 
@@ -1595,10 +1583,35 @@ public class SVGParser {
 				}
 			} else if (localName.equals("text")) {
 				if (this.drawCharacters) {
-					this.drawCharacters = false;
+					String text = getFullText();
+					if (text.length() == 1 && text.equals("\n")) {
+						newLineCount += 1;
+						canvas.translate(0, newLineCount * textSize);
+					} else {
+						if (this.textX != null && this.textY != null) {
+							canvas.drawText(text, this.textX, this.textY, textPaint);
+						} else {
+							canvas.concat(font_matrix);
+							canvas.drawText(text, 0, 0, textPaint);
+						}
+					}
 					canvas.restore();
+					textBuilder = null;
+					this.drawCharacters = false;
 				}
 			}
 		}
+		
+		/**
+		 * Return full text value for 'text' element.
+		 * You can override this method if you want replace text before drawing.
+		 * See <a href="http://stackoverflow.com/questions/4567636/java-sax-parser-split-calls-to-characters">here</a> for details.
+		 */
+		protected String getFullText() {
+			if (textBuilder == null) {
+				throw new IllegalStateException("Must be called only if current element is 'text' and when the value is fully parsed!");
+			}
+			return textBuilder.toString();
+        }
 	}
 }
