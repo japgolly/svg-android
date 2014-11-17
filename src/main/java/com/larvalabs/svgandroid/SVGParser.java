@@ -1325,7 +1325,8 @@ public class SVGParser {
 					} else {
 						float alpha = props.getFloat("stop-opacity", 1) * currentLayerAttributes().opacity;
 						int alphaInt = Math.round(255 * alpha);
-						colour = stopColour.intValue() | (alphaInt << 24);
+						// wipe the auto FF opacity from getColor() before applying stop-opacity:
+						colour = (stopColour.intValue() & 0xFFFFFF) | (alphaInt << 24);
 					}
 					gradient.colors.add(colour);
 
