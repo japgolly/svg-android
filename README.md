@@ -21,6 +21,13 @@ Changes
   [josefpavlik](https://github.com/josefpavlik/svg-android) and
   [mrn](https://github.com/mrn/svg-android)
 
+Gradle
+=====
+
+```groovy
+compile 'com.github.japgolly.android:svg-android:2.0.6'
+```
+
 Maven
 =====
 Add this to your Android project's pom.xml:
