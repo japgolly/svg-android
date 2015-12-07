@@ -15,10 +15,7 @@ import android.graphics.Shader.TileMode;
 import android.util.FloatMath;
 import android.util.Log;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.StringTokenizer;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import javax.xml.parsers.SAXParser;
@@ -193,7 +190,7 @@ public class SVGParser {
 	 */
 	private static Matrix parseTransform(String s) {
 		Matrix matrix = new Matrix();
-		while (true) {
+		while (true && s != null) {
 			parseTransformItem(s, matrix);
 			// Log.i(TAG, "Transformed: (" + s + ") " + matrix);
 			final int rparen = s.indexOf(")");
@@ -832,7 +829,7 @@ public class SVGParser {
 	static class SVGHandler extends DefaultHandler {
 
 		private Picture picture;
-		private Canvas canvas;
+//		private Canvas canvas;
 		private Float limitsAdjustmentX, limitsAdjustmentY;
 
 		final LinkedList<LayerAttributes> layerAttributeStack = new LinkedList<LayerAttributes>();
@@ -867,7 +864,9 @@ public class SVGParser {
 
 		boolean whiteMode = false;
 
-		Integer canvasRestoreCount;
+		Deque<Integer> canvasRestoreCount = new ArrayDeque<Integer>();
+		Deque<Canvas> canvas = new ArrayDeque<Canvas>();
+//		Integer canvasRestoreCount;
 
 		final LinkedList<Boolean> transformStack = new LinkedList<Boolean>();
 		final LinkedList<Matrix> matrixStack = new LinkedList<Matrix>();
@@ -1230,8 +1229,8 @@ public class SVGParser {
 			transformStack.addLast(pushed);
 			if (pushed) {
 				final Matrix matrix = parseTransform(transform);
-				canvas.save();
-				canvas.concat(matrix);
+				canvas.peek().save();
+				canvas.peek().concat(matrix);
 				matrix.postConcat(matrixStack.getLast());
 				matrixStack.addLast(matrix);
 			}
@@ -1240,7 +1239,7 @@ public class SVGParser {
 
 		private void popTransform() {
 			if (transformStack.removeLast()) {
-				canvas.restore();
+				canvas.peek().restore();
 				matrixStack.removeLast();
 			}
 		}
@@ -1275,7 +1274,7 @@ public class SVGParser {
 				return;
 			}
 			if (localName.equals("svg")) {
-				canvas = null;
+				//canvas = null;
                 SVG_FILL = getStringAttr("fill", atts);
 				String viewboxStr = getStringAttr("viewBox", atts);
 				if (viewboxStr != null) {
@@ -1291,21 +1290,21 @@ public class SVGParser {
 
 							float width = FloatMath.ceil(x2 - x1);
 							float height = FloatMath.ceil(y2 - y1);
-							canvas = picture.beginRecording((int) width, (int) height);
-							canvasRestoreCount = canvas.save();
-							canvas.clipRect(0f, 0f, width, height);
+							canvas.push(picture.beginRecording((int) width, (int) height));
+							canvasRestoreCount.push(canvas.peek().save());
+							canvas.peek().clipRect(0f, 0f, width, height);
 							limitsAdjustmentX = -x1;
 							limitsAdjustmentY = -y1;
-							canvas.translate(limitsAdjustmentX, limitsAdjustmentY);
+							canvas.peek().translate(limitsAdjustmentX, limitsAdjustmentY);
 						}
 					}
 				}
 				// No viewbox
-				if (canvas == null) {
+				if (viewboxStr == null || viewboxStr.isEmpty()) {
 					int width = (int) FloatMath.ceil(getFloatAttr("width", atts));
 					int height = (int) FloatMath.ceil(getFloatAttr("height", atts));
-					canvas = picture.beginRecording(width, height);
-					canvasRestoreCount = null;
+					canvas.push(picture.beginRecording(width, height));
+					canvasRestoreCount.push(canvas.peek().getSaveCount());
 				}
 
 			} else if (localName.equals("defs")) {
@@ -1389,18 +1388,18 @@ public class SVGParser {
 				if (doFill(props, rect)) {
 					rect.set(x, y, x + width, y + height);
 					if (rx <= 0f && ry <= 0f) {
-						canvas.drawRect(rect, fillPaint);
+						canvas.peek().drawRect(rect, fillPaint);
 					} else {
-						canvas.drawRoundRect(rect, rx, ry, fillPaint);
+						canvas.peek().drawRoundRect(rect, rx, ry, fillPaint);
 					}
 					doLimits(rect);
 				}
 				if (doStroke(props)) {
 					rect.set(x, y, x + width, y + height);
 					if (rx <= 0f && ry <= 0f) {
-						canvas.drawRect(rect, strokePaint);
+						canvas.peek().drawRect(rect, strokePaint);
 					} else {
-						canvas.drawRoundRect(rect, rx, ry, strokePaint);
+						canvas.peek().drawRoundRect(rect, rx, ry, strokePaint);
 					}
 					doLimits(rect, strokePaint);
 				}
@@ -1414,7 +1413,7 @@ public class SVGParser {
 				if (doStroke(props)) {
 					pushTransform(atts);
 					rect.set(x1, y1, x2, y2);
-					canvas.drawLine(x1, y1, x2, y2, strokePaint);
+					canvas.peek().drawLine(x1, y1, x2, y2, strokePaint);
 					doLimits(rect, strokePaint);
 					popTransform();
 				}
@@ -1443,7 +1442,7 @@ public class SVGParser {
 					}
 					this.newLineCount = 0;
 					textPaint.setTextSize(textSize);
-					canvas.save();
+					canvas.peek().save();
 					popTransform();
 				}
 			} else if (!hidden && (localName.equals("circle") || localName.equals("ellipse"))) {
@@ -1463,11 +1462,11 @@ public class SVGParser {
 					Properties props = new Properties(atts);
 					rect.set(centerX - radiusX, centerY - radiusY, centerX + radiusX, centerY + radiusY);
 					if (doFill(props, rect)) {
-						canvas.drawOval(rect, fillPaint);
+						canvas.peek().drawOval(rect, fillPaint);
 						doLimits(rect);
 					}
 					if (doStroke(props)) {
-						canvas.drawOval(rect, strokePaint);
+						canvas.peek().drawOval(rect, strokePaint);
 						doLimits(rect, strokePaint);
 					}
 					popTransform();
@@ -1492,11 +1491,11 @@ public class SVGParser {
 						}
 						p.computeBounds(rect, false);
 						if (doFill(props, rect)) {
-							canvas.drawPath(p, fillPaint);
+							canvas.peek().drawPath(p, fillPaint);
 							doLimits(rect);
 						}
 						if (doStroke(props)) {
-							canvas.drawPath(p, strokePaint);
+							canvas.peek().drawPath(p, strokePaint);
 							doLimits(rect, strokePaint);
 						}
 						popTransform();
@@ -1508,11 +1507,11 @@ public class SVGParser {
 				Properties props = new Properties(atts);
 				p.computeBounds(rect, false);
 				if (doFill(props, rect)) {
-					canvas.drawPath(p, fillPaint);
+					canvas.peek().drawPath(p, fillPaint);
 					doLimits(rect);
 				}
 				if (doStroke(props)) {
-					canvas.drawPath(p, strokePaint);
+					canvas.peek().drawPath(p, strokePaint);
 					doLimits(rect, strokePaint);
 				}
 				popTransform();
@@ -1529,22 +1528,22 @@ public class SVGParser {
 		public void characters(char ch[], int start, int length) {
 			if (this.drawCharacters) {
 				if (length == 1 && ch[0] == '\n') {
-					canvas.restore();
-					canvas.save();
+					canvas.peek().restore();
+					canvas.peek().save();
 
 					newLineCount += 1;
-					canvas.translate(0, newLineCount * textSize);
+					canvas.peek().translate(0, newLineCount * textSize);
 				} else {
 					String text = new String(ch, start, length);
 					if (this.textX != null && this.textY != null) {
-						canvas.drawText(text, this.textX, this.textY, textPaint);
+						canvas.peek().drawText(text, this.textX, this.textY, textPaint);
 					} else {
-						canvas.setMatrix(font_matrix);
-						canvas.drawText(text, 0, 0, textPaint);
+						canvas.peek().setMatrix(font_matrix);
+						canvas.peek().drawText(text, 0, 0, textPaint);
 					}
 					Float delta = textPaint.measureText(text);
 
-					canvas.translate(delta, 0);
+					canvas.peek().translate(delta, 0);
 				}
 			}
 		}
@@ -1552,8 +1551,8 @@ public class SVGParser {
 		@Override
 		public void endElement(String namespaceURI, String localName, String qName) throws SAXException {
 			if (localName.equals("svg")) {
-				if (canvasRestoreCount != null) {
-					canvas.restoreToCount(canvasRestoreCount);
+				if (!canvasRestoreCount.isEmpty()) {
+					canvas.peek().restoreToCount(canvasRestoreCount.pop());
 				}
 				if (limitsAdjustmentX != null) {
 					limits.left += limitsAdjustmentX;
@@ -1564,6 +1563,9 @@ public class SVGParser {
 					limits.bottom += limitsAdjustmentY;
 				}
 				picture.endRecording();
+				if (!canvas.isEmpty()) {
+					canvas.pop();
+				}
 
 			} else if (localName.equals("linearGradient") || localName.equals("radialGradient")) {
 				if (gradient.id != null) {
@@ -1596,7 +1598,7 @@ public class SVGParser {
 			} else if (localName.equals("text")) {
 				if (this.drawCharacters) {
 					this.drawCharacters = false;
-					canvas.restore();
+					canvas.peek().restore();
 				}
 			}
 		}
