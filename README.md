@@ -18,6 +18,12 @@ Changes
   [mrn](https://github.com/mrn/svg-android)
 * Update to support API level 23 
 
+Gradle
+======
+```groovy
+compile 'com.github.japgolly.android:svg-android:2.0.7'
+```
+
 Maven
 =====
 Add this to your Android project's pom.xml:
