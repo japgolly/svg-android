@@ -1,6 +1,5 @@
 package com.larvalabs.svgandroid;
 
-import java.lang.reflect.Field;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
@@ -13,20 +12,10 @@ import java.lang.reflect.Field;
  */
 /**
  * Parses numbers from SVG text. Based on the Batik Number Parser (Apache 2 License).
- * 
+ *
  * @author Apache Software Foundation, Larva Labs LLC
  */
 public class ParserHelper {
-
-	private static final Field STRING_CHARS;
-	static {
-		try {
-			STRING_CHARS = String.class.getDeclaredField("value");
-			STRING_CHARS.setAccessible(true);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
 
 	private final char[] s;
 	private final int n;
@@ -34,11 +23,7 @@ public class ParserHelper {
 	public int pos;
 
 	public ParserHelper(String str, int pos) {
-		try {
-			this.s = (char[]) STRING_CHARS.get(str);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		this.s = str.toCharArray();
 		this.pos = pos;
 		n = s.length;
 		current = s[pos];
@@ -69,14 +54,14 @@ public class ParserHelper {
 		while (pos < n) {
 			char c = s[pos];
 			switch (c) {
-			case ' ':
-			case ',':
-			case '\n':
-			case '\t':
-				advance();
-				break;
-			default:
-				return;
+				case ' ':
+				case ',':
+				case '\n':
+				case '\t':
+					advance();
+					break;
+				default:
+					return;
 			}
 		}
 	}
@@ -100,98 +85,25 @@ public class ParserHelper {
 		boolean expPos = true;
 
 		switch (current) {
-		case '-':
-			mantPos = false;
-			// fallthrough
-		case '+':
-			current = read();
+			case '-':
+				mantPos = false;
+				// fallthrough
+			case '+':
+				current = read();
 		}
 
 		m1: switch (current) {
-		default:
-			return Float.NaN;
-
-		case '.':
-			break;
-
-		case '0':
-			mantRead = true;
-			l: for (;;) {
-				current = read();
-				switch (current) {
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-					break l;
-				case '.':
-				case 'e':
-				case 'E':
-					break m1;
-				default:
-					return 0.0f;
-				case '0':
-				}
-			}
-
-		case '1':
-		case '2':
-		case '3':
-		case '4':
-		case '5':
-		case '6':
-		case '7':
-		case '8':
-		case '9':
-			mantRead = true;
-			l: for (;;) {
-				if (mantDig < 9) {
-					mantDig++;
-					mant = mant * 10 + (current - '0');
-				} else {
-					expAdj++;
-				}
-				current = read();
-				switch (current) {
-				default:
-					break l;
-				case '0':
-				case '1':
-				case '2':
-				case '3':
-				case '4':
-				case '5':
-				case '6':
-				case '7':
-				case '8':
-				case '9':
-				}
-			}
-		}
-
-		if (current == '.') {
-			current = read();
-			m2: switch (current) {
 			default:
-			case 'e':
-			case 'E':
-				if (!mantRead) {
-					reportUnexpectedCharacterError(current);
-					return 0.0f;
-				}
+				return Float.NaN;
+
+			case '.':
 				break;
 
 			case '0':
-				if (mantDig == 0) {
-					l: for (;;) {
-						current = read();
-						expAdj--;
-						switch (current) {
+				mantRead = true;
+				l: for (;;) {
+					current = read();
+					switch (current) {
 						case '1':
 						case '2':
 						case '3':
@@ -202,15 +114,16 @@ public class ParserHelper {
 						case '8':
 						case '9':
 							break l;
+						case '.':
+						case 'e':
+						case 'E':
+							break m1;
 						default:
-							if (!mantRead) {
-								return 0.0f;
-							}
-							break m2;
+							return 0.0f;
 						case '0':
-						}
 					}
 				}
+
 			case '1':
 			case '2':
 			case '3':
@@ -220,48 +133,69 @@ public class ParserHelper {
 			case '7':
 			case '8':
 			case '9':
+				mantRead = true;
 				l: for (;;) {
 					if (mantDig < 9) {
 						mantDig++;
 						mant = mant * 10 + (current - '0');
-						expAdj--;
+					} else {
+						expAdj++;
 					}
 					current = read();
 					switch (current) {
-					default:
-						break l;
-					case '0':
-					case '1':
-					case '2':
-					case '3':
-					case '4':
-					case '5':
-					case '6':
-					case '7':
-					case '8':
-					case '9':
+						default:
+							break l;
+						case '0':
+						case '1':
+						case '2':
+						case '3':
+						case '4':
+						case '5':
+						case '6':
+						case '7':
+						case '8':
+						case '9':
 					}
 				}
-			}
 		}
 
-		switch (current) {
-		case 'e':
-		case 'E':
+		if (current == '.') {
 			current = read();
-			switch (current) {
-			default:
-				reportUnexpectedCharacterError(current);
-				return 0f;
-			case '-':
-				expPos = false;
-			case '+':
-				current = read();
-				switch (current) {
+			m2: switch (current) {
 				default:
-					reportUnexpectedCharacterError(current);
-					return 0f;
+				case 'e':
+				case 'E':
+					if (!mantRead) {
+						reportUnexpectedCharacterError(current);
+						return 0.0f;
+					}
+					break;
+
 				case '0':
+					if (mantDig == 0) {
+						l: for (;;) {
+							current = read();
+							expAdj--;
+							switch (current) {
+								case '1':
+								case '2':
+								case '3':
+								case '4':
+								case '5':
+								case '6':
+								case '7':
+								case '8':
+								case '9':
+									break l;
+								default:
+									if (!mantRead) {
+										return 0.0f;
+									}
+									break m2;
+								case '0':
+							}
+						}
+					}
 				case '1':
 				case '2':
 				case '3':
@@ -271,24 +205,59 @@ public class ParserHelper {
 				case '7':
 				case '8':
 				case '9':
-				}
-			case '0':
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
+					l: for (;;) {
+						if (mantDig < 9) {
+							mantDig++;
+							mant = mant * 10 + (current - '0');
+							expAdj--;
+						}
+						current = read();
+						switch (current) {
+							default:
+								break l;
+							case '0':
+							case '1':
+							case '2':
+							case '3':
+							case '4':
+							case '5':
+							case '6':
+							case '7':
+							case '8':
+							case '9':
+						}
+					}
 			}
+		}
 
-			en: switch (current) {
-			case '0':
-				l: for (;;) {
-					current = read();
-					switch (current) {
+		switch (current) {
+			case 'e':
+			case 'E':
+				current = read();
+				switch (current) {
+					default:
+						reportUnexpectedCharacterError(current);
+						return 0f;
+					case '-':
+						expPos = false;
+					case '+':
+						current = read();
+						switch (current) {
+							default:
+								reportUnexpectedCharacterError(current);
+								return 0f;
+							case '0':
+							case '1':
+							case '2':
+							case '3':
+							case '4':
+							case '5':
+							case '6':
+							case '7':
+							case '8':
+							case '9':
+						}
+					case '0':
 					case '1':
 					case '2':
 					case '3':
@@ -298,32 +267,29 @@ public class ParserHelper {
 					case '7':
 					case '8':
 					case '9':
-						break l;
-					default:
-						break en;
-					case '0':
-					}
 				}
 
-			case '1':
-			case '2':
-			case '3':
-			case '4':
-			case '5':
-			case '6':
-			case '7':
-			case '8':
-			case '9':
-				l: for (;;) {
-					if (expDig < 3) {
-						expDig++;
-						exp = exp * 10 + (current - '0');
-					}
-					current = read();
-					switch (current) {
-					default:
-						break l;
+				en: switch (current) {
 					case '0':
+						l: for (;;) {
+							current = read();
+							switch (current) {
+								case '1':
+								case '2':
+								case '3':
+								case '4':
+								case '5':
+								case '6':
+								case '7':
+								case '8':
+								case '9':
+									break l;
+								default:
+									break en;
+								case '0':
+							}
+						}
+
 					case '1':
 					case '2':
 					case '3':
@@ -333,10 +299,29 @@ public class ParserHelper {
 					case '7':
 					case '8':
 					case '9':
-					}
+						l: for (;;) {
+							if (expDig < 3) {
+								expDig++;
+								exp = exp * 10 + (current - '0');
+							}
+							current = read();
+							switch (current) {
+								default:
+									break l;
+								case '0':
+								case '1':
+								case '2':
+								case '3':
+								case '4':
+								case '5':
+								case '6':
+								case '7':
+								case '8':
+								case '9':
+							}
+						}
 				}
-			}
-		default:
+			default:
 		}
 
 		if (!expPos) {
