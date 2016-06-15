@@ -1,9 +1,5 @@
-# Status: Unmaintained. Discontinued.
-This project is no longer being developed or maintained.
-
-### _
-
 This is forked from the awesome but unmaintained:
+https://github.com/japgolly/svg-android
 http://code.google.com/p/svg-android/
 
 Changes
@@ -20,6 +16,7 @@ Changes
 * Has most community patches applied. Great work to
   [josefpavlik](https://github.com/josefpavlik/svg-android) and
   [mrn](https://github.com/mrn/svg-android)
+* Update to support API level 23 
 
 Maven
 =====
