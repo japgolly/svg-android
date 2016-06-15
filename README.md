@@ -1,6 +1,6 @@
 This is forked from the awesome but unmaintained:
 https://github.com/japgolly/svg-android
-http://code.google.com/p/svg-android/
+(which was forked from http://code.google.com/p/svg-android/)
 
 Changes
 =======
