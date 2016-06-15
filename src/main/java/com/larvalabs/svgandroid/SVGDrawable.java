@@ -20,7 +20,7 @@ public class SVGDrawable extends PictureDrawable {
 	private SVGState mSvgState;
 
 	/**
-	 * @param picture
+	 * @param svg
 	 */
 	public SVGDrawable(SVG svg) {
 		super(svg.getPicture());
@@ -33,14 +33,21 @@ public class SVGDrawable extends PictureDrawable {
 	}
 
 	/**
-	 * Original author nimingtao wrote that this method may not work on devices with Ice Cream Sandwich (Android v4.0).<br/>
-	 * See: http://stackoverflow.com/q/10384613/1084488<br/>
+	 * <p>
+	 * Original author nimingtao wrote that this method may not work on devices with Ice Cream Sandwich (Android v4.0).
+	 * </p>
+	 * <p>
+	 * See: http://stackoverflow.com/q/10384613/1084488
+	 * </p>
+	 * <p>
 	 * Apparently this is because canvas.drawPicture is not supported with hardware acceleration. If the problem occurs
 	 * and solved by programmatically turning off hardware acceleration only on the view that will draw the Picture:
-	 * view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);<br/>
-	 * <br/>
+	 * view.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+	 * </p>
+	 * <p>
 	 * However, I (mstevens83) was unable to reproduce this problem on an emulator running Ice Cream Sandwich, nor on
 	 * physical devices running Jelly Bean (v4.1.2 and v4.3 tested).
+	 * </p>
 	 */
 	@Override
 	public void draw(Canvas canvas) {
