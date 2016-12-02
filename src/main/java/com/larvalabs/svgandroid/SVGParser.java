@@ -1364,12 +1364,8 @@ public class SVGParser {
 				fillSetStack.addLast(fillSet);
 				strokeSetStack.addLast(strokeSet);
 
-				doFill(props, null); // Added by mrn but a boundingBox is now required by josef.
-				doStroke(props);
-
-				fillSet |= (props.getString("fill") != null);
-				strokeSet |= (props.getString("stroke") != null);
-
+				fillSet |= doFill(props, null); // Added by mrn but a boundingBox is now required by josef.
+				strokeSet |= doStroke(props);
 			} else if (!hidden && localName.equals("rect")) {
 				Float x = getFloatAttr("x", atts);
 				if (x == null) {
