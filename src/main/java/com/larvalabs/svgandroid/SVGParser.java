@@ -12,7 +12,6 @@ import android.graphics.RadialGradient;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.Shader.TileMode;
-import android.util.FloatMath;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -518,8 +517,8 @@ public class SVGParser {
 		ry = Math.abs(ry);
 
 		final float thrad = theta * (float) Math.PI / 180;
-		final float st = FloatMath.sin(thrad);
-		final float ct = FloatMath.cos(thrad);
+		final float st = (float) Math.sin(thrad);
+		final float ct = (float) Math.cos(thrad);
 
 		final float xc = (lastX - x) / 2;
 		final float yc = (lastY - y) / 2;
@@ -534,16 +533,17 @@ public class SVGParser {
 		float lambda = (x1ts / rxs + y1ts / rys) * 1.001f; // add 0.1% to be sure that no out of range occurs due to
 															// limited precision
 		if (lambda > 1) {
-			float lambdasr = FloatMath.sqrt(lambda);
+			float lambdasr = (float) Math.sqrt(lambda);
 			rx *= lambdasr;
 			ry *= lambdasr;
 			rxs = rx * rx;
 			rys = ry * ry;
 		}
 
-		final float R =
-				FloatMath.sqrt((rxs * rys - rxs * y1ts - rys * x1ts) / (rxs * y1ts + rys * x1ts))
-						* ((largeArc == sweepArc) ? -1 : 1);
+		final float R = (float) (
+				Math.sqrt((rxs * rys - rxs * y1ts - rys * x1ts) / (rxs * y1ts + rys * x1ts))
+						* ((largeArc == sweepArc) ? -1 : 1)
+		);
 		final float cxt = R * rx * y1t / ry;
 		final float cyt = -R * ry * x1t / rx;
 		final float cx = ct * cxt - st * cyt + (lastX + x) / 2;
@@ -849,6 +849,8 @@ public class SVGParser {
 
 		Paint textPaint;
 		boolean drawCharacters;
+		// See http://stackoverflow.com/questions/4567636/java-sax-parser-split-calls-to-characters
+		StringBuilder textBuilder;
 		Float textX;
 		Float textY;
 		int newLineCount;
@@ -1122,7 +1124,7 @@ public class SVGParser {
 
         private void doColor(Properties atts, Integer color, boolean fillMode, Paint paint) {
 			int c = (0xFFFFFF & color) | 0xFF000000;
-			if (searchColor != null && searchColor.intValue() == c) {
+			if (searchColor != null && searchColor == c) {
 				c = replaceColor;
 			}
 			paint.setShader(null);
@@ -1289,8 +1291,8 @@ public class SVGParser {
 							x2 += x1;
 							y2 += y1;
 
-							float width = FloatMath.ceil(x2 - x1);
-							float height = FloatMath.ceil(y2 - y1);
+							float width = (float) Math.ceil(x2 - x1);
+							float height = (float) Math.ceil(y2 - y1);
 							canvas = picture.beginRecording((int) width, (int) height);
 							canvasRestoreCount = canvas.save();
 							canvas.clipRect(0f, 0f, width, height);
@@ -1302,8 +1304,8 @@ public class SVGParser {
 				}
 				// No viewbox
 				if (canvas == null) {
-					int width = (int) FloatMath.ceil(getFloatAttr("width", atts));
-					int height = (int) FloatMath.ceil(getFloatAttr("height", atts));
+					int width = (int) Math.ceil(getFloatAttr("width", atts));
+					int height = (int) Math.ceil(getFloatAttr("height", atts));
 					canvas = picture.beginRecording(width, height);
 					canvasRestoreCount = null;
 				}
@@ -1323,9 +1325,14 @@ public class SVGParser {
 					if (stopColour == null) {
 						colour = 0;
 					} else {
-						float alpha = props.getFloat("stop-opacity", 1) * currentLayerAttributes().opacity;
-						int alphaInt = Math.round(255 * alpha);
-						colour = stopColour.intValue() | (alphaInt << 24);
+						Float alpha = props.getFloat("stop-opacity");
+						if (alpha != null) {
+							int alphaInt = Math.round(255 * alpha * currentLayerAttributes().opacity);
+							// wipe the auto FF opacity from stopColour before applying stop-opacity:
+							colour = (stopColour & 0xFFFFFF) | (alphaInt << 24);
+						} else {
+							colour = stopColour;
+						}
 					}
 					gradient.colors.add(colour);
 
@@ -1364,12 +1371,8 @@ public class SVGParser {
 				fillSetStack.addLast(fillSet);
 				strokeSetStack.addLast(strokeSet);
 
-				doFill(props, null); // Added by mrn but a boundingBox is now required by josef.
-				doStroke(props);
-
-				fillSet |= (props.getString("fill") != null);
-				strokeSet |= (props.getString("stroke") != null);
-
+				fillSet |= doFill(props, null); // Added by mrn but a boundingBox is now required by josef.
+				strokeSet |= doStroke(props);
 			} else if (!hidden && localName.equals("rect")) {
 				Float x = getFloatAttr("x", atts);
 				if (x == null) {
@@ -1443,8 +1446,9 @@ public class SVGParser {
 					}
 					this.newLineCount = 0;
 					textPaint.setTextSize(textSize);
-					canvas.save();
 					popTransform();
+					canvas.save();
+					textBuilder = new StringBuilder();
 				}
 			} else if (!hidden && (localName.equals("circle") || localName.equals("ellipse"))) {
 				Float centerX, centerY, radiusX, radiusY;
@@ -1528,24 +1532,9 @@ public class SVGParser {
 		@Override
 		public void characters(char ch[], int start, int length) {
 			if (this.drawCharacters) {
-				if (length == 1 && ch[0] == '\n') {
-					canvas.restore();
-					canvas.save();
-
-					newLineCount += 1;
-					canvas.translate(0, newLineCount * textSize);
-				} else {
-					String text = new String(ch, start, length);
-					if (this.textX != null && this.textY != null) {
-						canvas.drawText(text, this.textX, this.textY, textPaint);
-					} else {
-						canvas.setMatrix(font_matrix);
-						canvas.drawText(text, 0, 0, textPaint);
-					}
-					Float delta = textPaint.measureText(text);
-
-					canvas.translate(delta, 0);
-				}
+				String text = new String(ch, start, length);
+				textBuilder.append(text);
+				return;
 			}
 		}
 
@@ -1595,10 +1584,35 @@ public class SVGParser {
 				}
 			} else if (localName.equals("text")) {
 				if (this.drawCharacters) {
-					this.drawCharacters = false;
+					String text = getFullText();
+					if (text.length() == 1 && text.equals("\n")) {
+						newLineCount += 1;
+						canvas.translate(0, newLineCount * textSize);
+					} else {
+						if (this.textX != null && this.textY != null) {
+							canvas.drawText(text, this.textX, this.textY, textPaint);
+						} else {
+							canvas.concat(font_matrix);
+							canvas.drawText(text, 0, 0, textPaint);
+						}
+					}
 					canvas.restore();
+					textBuilder = null;
+					this.drawCharacters = false;
 				}
 			}
 		}
+		
+		/**
+		 * Return full text value for 'text' element.
+		 * You can override this method if you want replace text before drawing.
+		 * See <a href="http://stackoverflow.com/questions/4567636/java-sax-parser-split-calls-to-characters">here</a> for details.
+		 */
+		protected String getFullText() {
+			if (textBuilder == null) {
+				throw new IllegalStateException("Must be called only if current element is 'text' and when the value is fully parsed!");
+			}
+			return textBuilder.toString();
+        }
 	}
 }

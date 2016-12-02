@@ -1,10 +1,6 @@
-# Status: Unmaintained. Discontinued.
-This project is no longer being developed or maintained.
-
-### _
-
 This is forked from the awesome but unmaintained:
-http://code.google.com/p/svg-android/
+https://github.com/japgolly/svg-android
+(which was forked from http://code.google.com/p/svg-android/)
 
 Changes
 =======
@@ -20,15 +16,22 @@ Changes
 * Has most community patches applied. Great work to
   [josefpavlik](https://github.com/josefpavlik/svg-android) and
   [mrn](https://github.com/mrn/svg-android)
+* Update to support API level 23 
+
+Gradle
+======
+```groovy
+compile 'com.github.bigfishcat.android:svg-android:2.0.8'
+```
 
 Maven
 =====
 Add this to your Android project's pom.xml:
 ```xml
 <dependency>
-  <groupId>com.github.japgolly.android</groupId>
+  <groupId>com.github.bigfishcat.android</groupId>
   <artifactId>svg-android</artifactId>
-	<version>2.0.6</version>
+	<version>2.0.8</version>
 </dependency>
 ```
 
