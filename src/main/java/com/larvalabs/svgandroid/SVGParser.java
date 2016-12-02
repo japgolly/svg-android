@@ -1122,7 +1122,7 @@ public class SVGParser {
 
         private void doColor(Properties atts, Integer color, boolean fillMode, Paint paint) {
 			int c = (0xFFFFFF & color) | 0xFF000000;
-			if (searchColor != null && searchColor.intValue() == c) {
+			if (searchColor != null && searchColor == c) {
 				c = replaceColor;
 			}
 			paint.setShader(null);
@@ -1323,9 +1323,14 @@ public class SVGParser {
 					if (stopColour == null) {
 						colour = 0;
 					} else {
-						float alpha = props.getFloat("stop-opacity", 1) * currentLayerAttributes().opacity;
-						int alphaInt = Math.round(255 * alpha);
-						colour = stopColour.intValue() | (alphaInt << 24);
+						Float alpha = props.getFloat("stop-opacity");
+						if (alpha != null) {
+							int alphaInt = Math.round(255 * alpha * currentLayerAttributes().opacity);
+							// wipe the auto FF opacity from stopColour before applying stop-opacity:
+							colour = (stopColour & 0xFFFFFF) | (alphaInt << 24);
+						} else {
+							colour = stopColour;
+						}
 					}
 					gradient.colors.add(colour);
 
