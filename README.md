@@ -21,7 +21,7 @@ Changes
 Gradle
 ======
 ```groovy
-compile 'com.github.bigfishcat.android:svg-android:2.0.7'
+compile 'com.github.bigfishcat.android:svg-android:2.0.8'
 ```
 
 Maven
@@ -31,7 +31,7 @@ Add this to your Android project's pom.xml:
 <dependency>
   <groupId>com.github.bigfishcat.android</groupId>
   <artifactId>svg-android</artifactId>
-	<version>2.0.7</version>
+	<version>2.0.8</version>
 </dependency>
 ```
 
